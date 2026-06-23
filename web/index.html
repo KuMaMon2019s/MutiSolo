@@ -11,13 +11,37 @@
       <aside id="navRail" class="navRail">
         <button id="collapseNavBtn" class="navToggle" title="Collapse menu">M</button>
         <nav>
-          <button class="navItem active" data-view="projectsView">Projects</button>
-          <button class="navItem" data-view="boardView">Board</button>
-          <button class="navItem" data-view="taskView">Task</button>
-          <button class="navItem" data-view="skillsView">ClawHub</button>
-          <button class="navItem" data-view="runtimesView">Runtimes</button>
-          <button class="navItem" data-view="connectionsView">Connections</button>
+          <button class="navIcon active" data-view="projectsView" title="Projects">P</button>
+          <button class="navIcon" data-view="boardView" title="Board">B</button>
+          <button class="navIcon" data-view="taskView" title="Task">T</button>
+          <button class="navIcon" data-view="skillsView" title="ClawHub">C</button>
+          <button class="navIcon" data-view="runtimesView" title="Runtimes">R</button>
+          <button class="navIcon" data-view="connectionsView" title="Connections">S</button>
         </nav>
+      </aside>
+
+      <aside id="moduleSidebar" class="moduleSidebar">
+        <h2>Tracker</h2>
+        <input class="searchInput" placeholder="Search..." />
+        <div class="statusPill">
+          <strong>56%</strong>
+          <span>TO DO</span>
+        </div>
+        <nav class="sideNav">
+          <button class="sideLink active" data-view="projectsView">My projects</button>
+          <button class="sideLink" data-view="boardView">All requirements</button>
+          <button class="sideLink" data-view="taskView">Current task</button>
+        </nav>
+        <div class="sideSection">
+          <div class="sideTitle">Your Projects</div>
+          <div id="sideProjectLinks" class="sideProjectLinks empty">No projects</div>
+        </div>
+        <div class="sideSection">
+          <div class="sideTitle">Resources</div>
+          <button class="sideLink" data-view="skillsView">Private ClawHub</button>
+          <button class="sideLink" data-view="runtimesView">Plugin runtimes</button>
+          <button class="sideLink" data-view="connectionsView">Connections</button>
+        </div>
       </aside>
 
       <section class="mainArea">

@@ -37,7 +37,7 @@ async function loadState() {
 
 function showView(viewId) {
   document.querySelectorAll(".view").forEach((node) => node.classList.remove("activeView"));
-  document.querySelectorAll(".navItem").forEach((node) => node.classList.toggle("active", node.dataset.view === viewId));
+  document.querySelectorAll("[data-view]").forEach((node) => node.classList.toggle("active", node.dataset.view === viewId));
   el(viewId).classList.add("activeView");
 }
 
@@ -49,6 +49,7 @@ function renderProjects() {
   if (!state.projects.length) {
     list.className = "cardsGrid empty";
     list.textContent = "No projects yet";
+    renderSideProjects();
     return;
   }
   list.className = "cardsGrid";
@@ -73,6 +74,32 @@ function renderProjects() {
   if (!state.selectedProject) state.selectedProject = select.value || state.projects[0].id;
   select.value = state.selectedProject;
   pickLatestRequirement();
+  renderSideProjects();
+}
+
+function renderSideProjects() {
+  const list = el("sideProjectLinks");
+  list.innerHTML = "";
+  if (!state.projects.length) {
+    list.className = "sideProjectLinks empty";
+    list.textContent = "No projects";
+    return;
+  }
+  list.className = "sideProjectLinks";
+  for (const project of state.projects) {
+    const button = document.createElement("button");
+    button.className = "sideLink";
+    button.textContent = project.name;
+    button.addEventListener("click", () => {
+      state.selectedProject = project.id;
+      el("projectSelect").value = project.id;
+      state.selectedRequirement = "";
+      pickLatestRequirement();
+      renderBoard();
+      showView("boardView");
+    });
+    list.append(button);
+  }
 }
 
 function pickLatestRequirement() {
