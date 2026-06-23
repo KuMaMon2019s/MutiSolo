@@ -260,6 +260,17 @@ async function generatePrompt() {
     node.innerHTML = `<strong>Segment ${index + 1}</strong><pre>${escapeHtml(segment)}</pre>`;
     segments.append(node);
   });
+  renderDiscordPreview();
+}
+
+function renderDiscordPreview() {
+  const preview = el("discordPreview");
+  if (!preview) return;
+  if (!state.discordText) {
+    preview.innerHTML = `<div class="discordMessage muted">Generate a prompt, then copy it into Discord.</div>`;
+    return;
+  }
+  preview.innerHTML = `<div class="discordMessage"><strong>MutiSolo</strong>${escapeHtml(state.discordText)}</div>`;
 }
 
 async function copyDiscordPrompt() {

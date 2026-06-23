@@ -13,7 +13,6 @@
         <nav>
           <button class="navIcon active" data-view="projectsView" title="Projects">P</button>
           <button class="navIcon" data-view="boardView" title="Board">B</button>
-          <button class="navIcon" data-view="taskView" title="Task">T</button>
           <button class="navIcon" data-view="skillsView" title="ClawHub">C</button>
           <button class="navIcon" data-view="runtimesView" title="Runtimes">R</button>
           <button class="navIcon" data-view="connectionsView" title="Connections">S</button>
@@ -30,7 +29,6 @@
         <nav class="sideNav">
           <button class="sideLink active" data-view="projectsView">My projects</button>
           <button class="sideLink" data-view="boardView">All requirements</button>
-          <button class="sideLink" data-view="taskView">Current task</button>
         </nav>
         <div class="sideSection">
           <div class="sideTitle">Your Projects</div>
@@ -124,6 +122,7 @@
         <section id="taskView" class="view">
           <div class="viewHead">
             <div>
+              <p class="breadcrumb">Project board / Requirement / Discord handoff</p>
               <h2>Task Detail</h2>
               <p class="muted">Generate a Discord-ready prompt for the selected requirement.</p>
             </div>
@@ -133,9 +132,43 @@
               <button id="openDiscordBtn" class="secondary">Discord</button>
             </div>
           </div>
-          <div class="panel">
-            <p id="artifactPath" class="muted"></p>
-            <div id="segments" class="segments empty">No prompt generated</div>
+          <div class="taskSplit">
+            <section class="panel promptPanel">
+              <div class="panelHead">
+                <h2>Prompt</h2>
+                <p id="artifactPath" class="muted"></p>
+              </div>
+              <div id="segments" class="segments empty">No prompt generated</div>
+            </section>
+            <section class="discordPanel">
+              <div class="discordShell">
+                <aside class="discordServers">
+                  <div class="discordBubble active">M</div>
+                  <div class="discordBubble">A</div>
+                  <div class="discordBubble">+</div>
+                </aside>
+                <aside class="discordChannels">
+                  <button class="discordSearch">Find or start a conversation</button>
+                  <div class="discordGroup">Direct Messages</div>
+                  <div class="discordUser active"><span class="avatar">A</span> OpenClaw A</div>
+                  <div class="discordUser"><span class="avatar">B</span> OpenClaw B</div>
+                  <div class="discordUser"><span class="avatar">C</span> OpenClaw C</div>
+                </aside>
+                <section class="discordChat">
+                  <header class="discordHeader">
+                    <strong>OpenClaw A</strong>
+                    <span class="muted">Discord handoff preview</span>
+                  </header>
+                  <div id="discordPreview" class="discordMessages">
+                    <div class="discordMessage muted">Generate a prompt, then copy it into Discord.</div>
+                  </div>
+                  <div class="discordComposer">
+                    <span>+</span>
+                    <input value="Message @OpenClaw A" readonly />
+                  </div>
+                </section>
+              </div>
+            </section>
           </div>
         </section>
 
