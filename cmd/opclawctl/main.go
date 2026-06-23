@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	controllayer "openclaw-coordination/control_layer"
 	"openclaw-coordination/internal/coordination"
 )
 
@@ -26,6 +27,9 @@ func run(args []string) error {
 	}
 
 	store := coordination.NewStore(coordination.DefaultStatePath())
+	if args[0] == "pipeline" {
+		return pipelineCommand(args[1:])
+	}
 	return store.WithState(func(state *coordination.State) (bool, error) {
 		switch args[0] {
 		case "agents":
@@ -41,6 +45,48 @@ func run(args []string) error {
 			return false, fmt.Errorf("unknown command %q", args[0])
 		}
 	})
+}
+
+func pipelineCommand(args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: opclawctl pipeline run -prompt <prompt>")
+	}
+	switch args[0] {
+	case "run":
+		return pipelineRunCommand(args[1:])
+	default:
+		return fmt.Errorf("unknown pipeline command %q", args[0])
+	}
+}
+
+func pipelineRunCommand(args []string) error {
+	fs := flag.NewFlagSet("pipeline run", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	prompt := fs.String("prompt", "", "input prompt")
+	artifactDir := fs.String("artifacts", "artifacts", "artifact output directory")
+	approveSystem := fs.Bool("approve-system", false, "allow system design artifacts to pass validation")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *prompt == "" && len(fs.Args()) > 0 {
+		*prompt = strings.Join(fs.Args(), " ")
+	}
+
+	result, err := controllayer.RunPipeline(controllayer.PipelineInput{
+		Prompt:        *prompt,
+		ApproveSystem: *approveSystem,
+	}, *artifactDir)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("artifact: %s\n", result.Path)
+	fmt.Printf("class: %s\n", result.Artifact.Validation.Class)
+	fmt.Printf("status: %s\n", result.Artifact.Validation.Status)
+	if len(result.Artifact.Validation.Reasons) > 0 {
+		fmt.Printf("reasons: %s\n", strings.Join(result.Artifact.Validation.Reasons, "; "))
+	}
+	return nil
 }
 
 func agentsCommand(args []string, state coordination.State) error {
@@ -166,6 +212,7 @@ Usage:
   opclawctl tasks match <task>
   opclawctl tasks assign <task> <agent>
   opclawctl events tail
+  opclawctl pipeline run -prompt "write a safe helper"
 
 State:
   OPENCLAW_STATE can override the default .openclaw/state.json path.`)
