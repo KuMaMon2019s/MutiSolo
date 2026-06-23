@@ -26,37 +26,21 @@ func run(args []string) error {
 	}
 
 	store := coordination.NewStore(coordination.DefaultStatePath())
-	state, err := store.Load()
-	if err != nil {
-		return err
-	}
-
-	var changed bool
-	switch args[0] {
-	case "agents":
-		return agentsCommand(args[1:], state)
-	case "skills":
-		return skillsCommand(args[1:], state)
-	case "tasks":
-		changed, err = tasksCommand(args[1:], &state)
-	case "events":
-		return eventsCommand(args[1:], state)
-	default:
-		printUsage()
-		return fmt.Errorf("unknown command %q", args[0])
-	}
-	if err != nil {
-		if changed {
-			if saveErr := store.Save(state); saveErr != nil {
-				return saveErr
-			}
+	return store.WithState(func(state *coordination.State) (bool, error) {
+		switch args[0] {
+		case "agents":
+			return false, agentsCommand(args[1:], *state)
+		case "skills":
+			return false, skillsCommand(args[1:], *state)
+		case "tasks":
+			return tasksCommand(args[1:], state)
+		case "events":
+			return false, eventsCommand(args[1:], *state)
+		default:
+			printUsage()
+			return false, fmt.Errorf("unknown command %q", args[0])
 		}
-		return err
-	}
-	if changed {
-		return store.Save(state)
-	}
-	return nil
+	})
 }
 
 func agentsCommand(args []string, state coordination.State) error {
