@@ -30,11 +30,65 @@ func (s Server) Handler() http.Handler {
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/openclaw/status", s.handleOpenClawStatus)
 	mux.HandleFunc("/api/clawhub/skills", s.handleClawHubSkills)
+	mux.HandleFunc("/api/clawhub/skills/", s.handleClawHubSkillActions)
 	mux.HandleFunc("/api/plugin-runtimes", s.handlePluginRuntimes)
 	mux.HandleFunc("/api/projects", s.handleProjects)
 	mux.HandleFunc("/api/projects/", s.handleProjectActions)
 	mux.HandleFunc("/api/github/push", s.handleGitHubPush)
 	return mux
+}
+
+func (s Server) handleClawHubSkillActions(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/clawhub/skills/")
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) == 0 || parts[0] == "" {
+		writeError(w, http.StatusNotFound, "skill not found")
+		return
+	}
+	skillID := parts[0]
+	if len(parts) == 1 && r.Method == http.MethodGet {
+		s.handleClawHubSkillDetail(w, r, skillID)
+		return
+	}
+	if len(parts) == 2 && parts[1] == "install" && r.Method == http.MethodPost {
+		s.handleClawHubSkillInstall(w, r, skillID)
+		return
+	}
+	writeError(w, http.StatusNotFound, "unknown skill action")
+}
+
+func (s Server) handleClawHubSkillDetail(w http.ResponseWriter, r *http.Request, skillID string) {
+	state, err := s.store.Load()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	skill, err := s.connector.GetClawHubSkill(r.Context(), state.Config.ClawHubBaseURL, skillID)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, skill)
+}
+
+func (s Server) handleClawHubSkillInstall(w http.ResponseWriter, r *http.Request, skillID string) {
+	state, err := s.store.Load()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var input SkillInstallRequest
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	input.SkillID = skillID
+	result, err := s.connector.InstallSkillOnOpenClaw(r.Context(), state.Config.OpenClawBaseURL, state.Config.OpenClawToken, state.Config.ClawHubBaseURL, input)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, result)
 }
 
 func (s Server) handlePluginRuntimes(w http.ResponseWriter, r *http.Request) {

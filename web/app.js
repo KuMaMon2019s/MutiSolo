@@ -2,6 +2,7 @@ const state = {
   projects: [],
   selectedProject: "",
   selectedRequirement: "",
+  selectedSkill: "",
   discordText: "",
 };
 
@@ -13,9 +14,7 @@ async function api(path, options = {}) {
     ...options,
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || response.statusText);
-  }
+  if (!response.ok) throw new Error(data.error || response.statusText);
   return data;
 }
 
@@ -33,6 +32,13 @@ async function loadState() {
   el("llmUrl").value = cfg.llm_base_url || "";
   renderDiscordWidget();
   renderProjects();
+  renderBoard();
+}
+
+function showView(viewId) {
+  document.querySelectorAll(".view").forEach((node) => node.classList.remove("activeView"));
+  document.querySelectorAll(".navItem").forEach((node) => node.classList.toggle("active", node.dataset.view === viewId));
+  el(viewId).classList.add("activeView");
 }
 
 function renderProjects() {
@@ -41,42 +47,38 @@ function renderProjects() {
   list.innerHTML = "";
   select.innerHTML = "";
   if (!state.projects.length) {
-    list.className = "projectList empty";
+    list.className = "cardsGrid empty";
     list.textContent = "No projects yet";
     return;
   }
-  list.className = "projectList";
+  list.className = "cardsGrid";
   for (const project of state.projects) {
     const option = document.createElement("option");
     option.value = project.id;
     option.textContent = project.name;
     select.append(option);
 
-    const item = document.createElement("div");
-    item.className = "item";
-    item.innerHTML = `<strong>${escapeHtml(project.name)}</strong><span>${escapeHtml(project.description || "")}</span>`;
-    const reqs = document.createElement("div");
-    reqs.className = "muted";
-    reqs.textContent = `${(project.requirements || []).length} requirement point(s)`;
-    item.append(reqs);
-    item.addEventListener("click", () => {
-      select.value = project.id;
+    const card = document.createElement("button");
+    card.className = "card";
+    card.innerHTML = `<strong>${escapeHtml(project.name)}</strong><span>${escapeHtml(project.description || "")}</span><p class="muted">${(project.requirements || []).length} requirement point(s)</p>`;
+    card.addEventListener("click", () => {
       state.selectedProject = project.id;
-      renderRequirementOptions();
+      select.value = project.id;
+      pickLatestRequirement();
+      renderBoard();
+      showView("boardView");
     });
-    list.append(item);
+    list.append(card);
   }
-  state.selectedProject = select.value || state.projects[0].id;
-  renderRequirementOptions();
-  renderBoard();
+  if (!state.selectedProject) state.selectedProject = select.value || state.projects[0].id;
+  select.value = state.selectedProject;
+  pickLatestRequirement();
 }
 
-function renderRequirementOptions() {
+function pickLatestRequirement() {
   const project = currentProject();
-  if (!project) return;
-  const latest = (project.requirements || []).at(-1);
-  state.selectedRequirement = latest ? latest.id : "";
-  renderBoard();
+  const latest = project ? (project.requirements || []).at(-1) : null;
+  if (!state.selectedRequirement && latest) state.selectedRequirement = latest.id;
 }
 
 async function saveConfig() {
@@ -95,15 +97,6 @@ async function saveConfig() {
   });
   await refreshConnections();
   renderDiscordWidget();
-  closeConnections();
-}
-
-function toggleConnections() {
-  el("connectionPopover").classList.toggle("hidden");
-}
-
-function closeConnections() {
-  el("connectionPopover").classList.add("hidden");
 }
 
 function renderDiscordWidget() {
@@ -117,6 +110,10 @@ function renderDiscordWidget() {
 }
 
 async function refreshConnections() {
+  await Promise.allSettled([loadOpenClawStatus(), loadSkills(), loadRuntimes()]);
+}
+
+async function loadOpenClawStatus() {
   const dot = el("openclawDot");
   const text = el("openclawText");
   const meta = el("openclawMeta");
@@ -132,42 +129,57 @@ async function refreshConnections() {
     text.textContent = "OpenClaw offline";
     meta.textContent = error.message;
   }
+}
 
-  try {
-    const skills = await api("/api/clawhub/skills");
-    const list = el("skillsList");
-    list.innerHTML = "";
-    if (!skills.length) {
-      list.className = "list empty";
-      list.textContent = "No skills loaded";
-      return;
-    }
-    list.className = "list";
-    for (const skill of skills) {
-      const item = document.createElement("div");
-      item.className = "item";
-      item.innerHTML = `<strong>${escapeHtml(skill.name || skill.id)}</strong><span>${escapeHtml((skill.capabilities || []).join(", "))}</span>`;
-      list.append(item);
-    }
-  } catch (error) {
-    el("skillsList").className = "list empty";
-    el("skillsList").textContent = error.message;
+async function loadSkills() {
+  const skills = await api("/api/clawhub/skills");
+  renderSkills(skills);
+}
+
+function renderSkills(skills) {
+  const list = el("skillsList");
+  list.innerHTML = "";
+  if (!skills.length) {
+    list.className = "cardsGrid empty";
+    list.textContent = "No private ClawHub skills loaded";
+    return;
   }
+  list.className = "cardsGrid";
+  for (const skill of skills) {
+    const card = document.createElement("button");
+    card.className = "card";
+    card.innerHTML = `<strong>${escapeHtml(skill.name || skill.id)}</strong><span>${escapeHtml((skill.capabilities || []).join(", "))}</span><p class="muted">${escapeHtml(skill.version || "")}</p>`;
+    card.addEventListener("click", () => selectSkill(skill.id));
+    list.append(card);
+  }
+}
 
-  try {
-    const runtimes = await api("/api/plugin-runtimes");
-    const list = el("runtimeList");
-    list.innerHTML = "";
-    list.className = "list";
-    for (const runtime of runtimes) {
-      const item = document.createElement("div");
-      item.className = "item";
-      item.innerHTML = `<strong>${escapeHtml(runtime.name)}</strong><span>${escapeHtml((runtime.extensions || []).join(", "))}</span>`;
-      list.append(item);
-    }
-  } catch (error) {
-    el("runtimeList").className = "list empty";
-    el("runtimeList").textContent = error.message;
+async function selectSkill(skillId) {
+  state.selectedSkill = skillId;
+  const skill = await api(`/api/clawhub/skills/${encodeURIComponent(skillId)}`);
+  el("skillDetail").className = "";
+  el("skillDetail").innerHTML = `<strong>${escapeHtml(skill.name || skill.id)}</strong><p>${escapeHtml(skill.description || "No description")}</p><p class="muted">${escapeHtml((skill.capabilities || []).join(", "))}</p><p class="muted">${escapeHtml(skill.runtime || "")} ${escapeHtml(skill.entrypoint || "")}</p>`;
+}
+
+async function installSelectedSkill() {
+  if (!state.selectedSkill) throw new Error("Select a skill first");
+  const result = await api(`/api/clawhub/skills/${encodeURIComponent(state.selectedSkill)}/install`, {
+    method: "POST",
+    body: JSON.stringify({ agent_id: el("skillAgentId").value.trim() }),
+  });
+  alert(result.result.sent ? "Install instruction sent to OpenClaw" : result.result.message || "Instruction not sent");
+}
+
+async function loadRuntimes() {
+  const runtimes = await api("/api/plugin-runtimes");
+  const list = el("runtimeList");
+  list.innerHTML = "";
+  list.className = "cardsGrid";
+  for (const runtime of runtimes) {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `<strong>${escapeHtml(runtime.name)}</strong><span>${escapeHtml((runtime.extensions || []).join(", "))}</span><p class="muted">${escapeHtml(runtime.command_hint || "")}</p>`;
+    list.append(card);
   }
 }
 
@@ -183,6 +195,7 @@ async function createProject() {
   });
   state.selectedProject = project.id;
   await loadState();
+  showView("boardView");
 }
 
 async function addRequirement() {
@@ -197,13 +210,14 @@ async function addRequirement() {
   });
   state.selectedRequirement = req.id;
   await loadState();
+  showView("taskView");
 }
 
 async function generatePrompt() {
   const project = currentProject();
   if (!project) throw new Error("Create or select a project first");
   const requirement = currentRequirement(project);
-  if (!requirement) throw new Error("Add a requirement first");
+  if (!requirement) throw new Error("Select or create a requirement first");
   const result = await api(`/api/projects/${project.id}/prompt`, {
     method: "POST",
     body: JSON.stringify({ requirement_id: requirement.id }),
@@ -222,9 +236,7 @@ async function generatePrompt() {
 }
 
 async function copyDiscordPrompt() {
-  if (!state.discordText) {
-    await generatePrompt();
-  }
+  if (!state.discordText) await generatePrompt();
   await navigator.clipboard.writeText(state.discordText);
   alert("Copied Discord prompt");
 }
@@ -251,7 +263,6 @@ function currentRequirement(project) {
 
 function renderBoard() {
   const list = el("boardList");
-  if (!list) return;
   const project = currentProject();
   const requirements = project ? project.requirements || [] : [];
   list.innerHTML = "";
@@ -267,13 +278,20 @@ function renderBoard() {
     item.innerHTML = `
       <div class="itemRow">
         <input type="checkbox" data-req-id="${escapeHtml(req.id)}" />
+        <button class="secondary" data-open-req="${escapeHtml(req.id)}">Open</button>
         <div>
           <strong>${escapeHtml(req.title)}</strong>
-          <span>${escapeHtml(req.status || "draft")}${req.commit_id ? ` · ${escapeHtml(req.commit_id)}` : ""}</span>
+          <span>${escapeHtml(req.status || "draft")}${req.commit_id ? ` - ${escapeHtml(req.commit_id)}` : ""}</span>
         </div>
       </div>`;
     list.append(item);
   }
+  document.querySelectorAll("[data-open-req]").forEach((node) => {
+    node.addEventListener("click", () => {
+      state.selectedRequirement = node.dataset.openReq;
+      showView("taskView");
+    });
+  });
 }
 
 async function closeSelected() {
@@ -308,12 +326,21 @@ function bind(id, fn) {
   });
 }
 
+document.querySelectorAll("[data-view]").forEach((node) => {
+  node.addEventListener("click", () => showView(node.dataset.view));
+});
+el("projectSelect").addEventListener("change", () => {
+  state.selectedProject = el("projectSelect").value;
+  state.selectedRequirement = "";
+  pickLatestRequirement();
+  renderBoard();
+});
+
+bind("collapseNavBtn", async () => el("navRail").classList.toggle("collapsed"));
 bind("refreshBtn", async () => {
   await loadState();
   await refreshConnections();
 });
-bind("connectionBtn", async () => toggleConnections());
-bind("closeConnectionBtn", async () => closeConnections());
 bind("saveConfigBtn", saveConfig);
 bind("createProjectBtn", createProject);
 bind("addReqBtn", addRequirement);
@@ -322,5 +349,7 @@ bind("copyDiscordBtn", copyDiscordPrompt);
 bind("openDiscordBtn", async () => openDiscord());
 bind("pushBtn", pushGitHub);
 bind("closeSelectedBtn", closeSelected);
+bind("loadSkillsBtn", loadSkills);
+bind("installSkillBtn", installSelectedSkill);
 
 loadState().then(refreshConnections).catch((error) => alert(error.message));

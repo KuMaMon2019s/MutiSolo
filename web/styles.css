@@ -1,17 +1,18 @@
 :root {
   color-scheme: light;
-  --bg: #eef2f6;
+  --bg: #edf1f5;
+  --rail: #18212c;
+  --rail-muted: #8d9aaa;
   --panel: #ffffff;
-  --text: #15202b;
+  --text: #17212d;
   --muted: #667386;
-  --line: #d9e0ea;
+  --line: #d9e1ea;
   --soft: #f7f9fc;
   --primary: #176b87;
   --primary-dark: #0f5067;
   --ok: #1f8a5b;
   --bad: #b23a48;
   --warn: #b7791f;
-  --shadow: 0 18px 50px rgba(29, 45, 68, 0.14);
 }
 
 * {
@@ -25,23 +26,74 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.shell {
+.appShell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
   min-height: 100vh;
-  padding: 18px;
 }
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
+.navRail {
+  background: var(--rail);
+  color: white;
+  padding: 14px;
+}
+
+.navRail.collapsed {
+  width: 68px;
+}
+
+.navRail.collapsed .navItem {
+  font-size: 0;
+}
+
+.navRail.collapsed .navItem::first-letter {
+  font-size: 14px;
+}
+
+.navToggle {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 18px;
+  background: #263242;
+}
+
+.navRail nav {
+  display: grid;
+  gap: 6px;
+}
+
+.navItem {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--rail-muted);
+}
+
+.navItem.active,
+.navItem:hover {
+  background: #263242;
+  color: white;
+}
+
+.mainArea {
+  padding: 18px;
+  min-width: 0;
+}
+
+.topbar,
+.viewHead,
+.toolbar,
+.buttonRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  background: rgba(238, 242, 246, 0.92);
+  gap: 12px;
+}
+
+.topbar {
   border-bottom: 1px solid var(--line);
-  padding: 0 0 14px;
-  backdrop-filter: blur(10px);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 h1,
@@ -52,79 +104,75 @@ p {
 
 h1 {
   font-size: 24px;
-  line-height: 1.2;
 }
 
 h2 {
-  font-size: 15px;
-  margin-bottom: 12px;
+  font-size: 16px;
+  margin-bottom: 10px;
 }
 
-.topbar p,
 .muted,
 label,
-.statusCard p {
+.topbar p {
   color: var(--muted);
   font-size: 13px;
 }
 
-.toolbar,
-.buttonRow,
-.sectionHead,
-.popoverHead,
-.popoverActions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.workspace {
-  display: grid;
-  grid-template-columns: 300px minmax(460px, 1fr) 340px;
-  gap: 14px;
-  margin-top: 16px;
-}
-
-.panel,
-.popover {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.panel {
-  min-width: 0;
-  padding: 16px;
-}
-
-.sidebar,
-.context {
-  align-self: start;
-}
-
-.work {
-  min-height: 720px;
-}
-
-.popover {
-  position: fixed;
-  top: 72px;
-  right: 18px;
-  z-index: 20;
-  width: min(720px, calc(100vw - 36px));
-  box-shadow: var(--shadow);
-  padding: 16px;
-}
-
-.hidden {
+.view {
   display: none;
 }
 
-.connectionGrid {
+.activeView {
+  display: block;
+}
+
+.viewHead {
+  margin-bottom: 14px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 0;
+}
+
+.formGrid,
+.connectionGrid,
+.statusGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.formGrid textarea {
+  grid-column: span 2;
+}
+
+.formStack,
+.list,
+.segments {
+  display: grid;
+  gap: 8px;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.boardLayout,
+.split {
+  display: grid;
+  grid-template-columns: 320px minmax(420px, 1fr);
+  gap: 14px;
+}
+
+.detailPanel {
+  align-self: start;
 }
 
 label {
@@ -146,7 +194,7 @@ select {
 }
 
 textarea {
-  min-height: 92px;
+  min-height: 96px;
   resize: vertical;
 }
 
@@ -179,33 +227,45 @@ button:hover {
   margin-top: 8px;
 }
 
-.formStack,
-.list,
-.projectList,
-.segments {
-  display: grid;
-  gap: 8px;
-}
-
-.formStack {
-  margin-bottom: 12px;
-}
-
-.statusCard {
-  background: var(--soft);
+.item,
+.segment,
+.card {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
-  margin-bottom: 16px;
+  background: var(--soft);
 }
 
-.discordWidget {
-  width: 100%;
-  height: 330px;
-  border: 0;
-  border-radius: 8px;
-  background: #1f2933;
-  margin-bottom: 16px;
+.item strong,
+.segment strong,
+.card strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.card {
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: #a9bbc9;
+  background: #fff;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.itemRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.itemRow input {
+  width: auto;
+  margin-top: 2px;
 }
 
 .statusLine {
@@ -230,40 +290,12 @@ button:hover {
   background: var(--bad);
 }
 
-.empty {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.item,
-.segment {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 10px;
-  background: var(--soft);
-}
-
-.item strong,
-.segment strong {
-  display: block;
-  margin-bottom: 4px;
-}
-
-.itemRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.itemRow input {
-  width: auto;
-  margin-top: 2px;
-}
-
-.outputBlock {
-  border-top: 1px solid var(--line);
-  margin-top: 16px;
-  padding-top: 16px;
+.discordWidget {
+  width: 100%;
+  height: 360px;
+  border: 0;
+  border-radius: 8px;
+  background: #1f2933;
 }
 
 pre {
@@ -273,37 +305,17 @@ pre {
   font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
-.segments {
-  margin-top: 10px;
-}
-
-@media (max-width: 1180px) {
-  .workspace {
-    grid-template-columns: 280px 1fr;
-  }
-
-  .context {
-    grid-column: span 2;
-  }
-}
-
-@media (max-width: 760px) {
-  .shell {
-    padding: 12px;
-  }
-
-  .topbar,
-  .toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .workspace,
-  .connectionGrid {
+@media (max-width: 980px) {
+  .appShell,
+  .boardLayout,
+  .split,
+  .formGrid,
+  .connectionGrid,
+  .statusGrid {
     grid-template-columns: 1fr;
   }
 
-  .context {
-    grid-column: auto;
+  .navRail {
+    display: none;
   }
 }

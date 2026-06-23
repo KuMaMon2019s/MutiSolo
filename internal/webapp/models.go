@@ -52,6 +52,17 @@ type SkillSummary struct {
 	Capabilities []string `json:"capabilities,omitempty"`
 	Runtime      string   `json:"runtime,omitempty"`
 	Entrypoint   string   `json:"entrypoint,omitempty"`
+	Description  string   `json:"description,omitempty"`
+}
+
+type SkillInstallRequest struct {
+	SkillID string `json:"skill_id"`
+	AgentID string `json:"agent_id,omitempty"`
+}
+
+type SkillInstallResult struct {
+	SkillID string     `json:"skill_id"`
+	Result  SendResult `json:"result"`
 }
 
 type PluginRuntime struct {

@@ -7,103 +7,156 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="shell">
-      <header class="topbar">
-        <div>
-          <h1>MutiSolo</h1>
-          <p>Coordinate OpenClaw agents through controlled prompts and verified commits</p>
-        </div>
-        <div class="toolbar">
-          <button id="connectionBtn" class="secondary">Connections</button>
-          <button id="refreshBtn" class="secondary" title="Refresh status">Refresh</button>
-          <button id="pushBtn">Push</button>
-        </div>
-      </header>
+    <main class="appShell">
+      <aside id="navRail" class="navRail">
+        <button id="collapseNavBtn" class="navToggle" title="Collapse menu">M</button>
+        <nav>
+          <button class="navItem active" data-view="projectsView">Projects</button>
+          <button class="navItem" data-view="boardView">Board</button>
+          <button class="navItem" data-view="taskView">Task</button>
+          <button class="navItem" data-view="skillsView">ClawHub</button>
+          <button class="navItem" data-view="runtimesView">Runtimes</button>
+          <button class="navItem" data-view="connectionsView">Connections</button>
+        </nav>
+      </aside>
 
-      <section id="connectionPopover" class="popover hidden">
-        <div class="popoverHead">
-          <h2>Connections</h2>
-          <button id="closeConnectionBtn" class="secondary">Close</button>
-        </div>
-        <div class="connectionGrid">
-          <label>OpenClaw Tailscale URL<input id="openclawUrl" placeholder="http://100.x.y.z:18800" /></label>
-          <label>OpenClaw bearer token<input id="openclawToken" type="password" placeholder="optional" /></label>
-          <label>GitHub repository<input id="githubRepo" placeholder="https://github.com/user/repo" /></label>
-          <label>Discord channel or DM URL<input id="discordUrl" placeholder="https://discord.com/channels/..." /></label>
-          <label>Discord server widget URL<input id="discordWidgetUrl" placeholder="https://discordapp.com/widget?id=...&theme=dark" /></label>
-          <label>OpenClaw Discord BOT ID<input id="discordBotId" placeholder="1518540891617235114" /></label>
-          <label>Private ClawHub URL<input id="clawhubUrl" placeholder="https://clawhub.internal" /></label>
-          <label>LLM API URL<input id="llmUrl" placeholder="https://llm.internal/v1" /></label>
-        </div>
-        <div class="popoverActions">
-          <button id="saveConfigBtn">Save Connections</button>
-        </div>
-      </section>
-
-      <section class="workspace">
-        <aside class="panel sidebar">
-          <div class="sectionHead">
-            <h2>Projects</h2>
-            <button id="createProjectBtn">Create</button>
+      <section class="mainArea">
+        <header class="topbar">
+          <div>
+            <h1>MutiSolo</h1>
+            <p>Coordinate OpenClaw agents through controlled prompts and verified commits</p>
           </div>
-          <div class="formStack">
-            <input id="projectName" placeholder="Project name" />
-            <input id="projectDesc" placeholder="Description" />
-            <textarea id="projectPlan" placeholder="Planning map"></textarea>
-            <textarea id="projectDocs" placeholder="Requirement document"></textarea>
+          <div class="toolbar">
+            <button id="refreshBtn" class="secondary" title="Refresh status">Refresh</button>
+            <button id="pushBtn">Push</button>
           </div>
-          <div id="projectsList" class="projectList"></div>
-        </aside>
+        </header>
 
-        <section class="panel work">
-          <div class="sectionHead">
-            <h2>Requirement Point</h2>
+        <section id="projectsView" class="view activeView">
+          <div class="viewHead">
+            <div>
+              <h2>Project List</h2>
+              <p class="muted">Create a project, then enter its board to coordinate requirements.</p>
+            </div>
+            <button id="createProjectBtn">Create Project</button>
+          </div>
+          <div class="panel">
+            <div class="formGrid">
+              <input id="projectName" placeholder="Project name" />
+              <input id="projectDesc" placeholder="Description" />
+              <textarea id="projectPlan" placeholder="Planning map"></textarea>
+              <textarea id="projectDocs" placeholder="Requirement document"></textarea>
+            </div>
+          </div>
+          <div id="projectsList" class="cardsGrid"></div>
+        </section>
+
+        <section id="boardView" class="view">
+          <div class="viewHead">
+            <div>
+              <h2>Project Board</h2>
+              <p class="muted">Select requirements, paste OpenClaw A's commit SHA, and close them in bulk.</p>
+            </div>
             <select id="projectSelect"></select>
           </div>
-          <div class="formStack">
-            <input id="reqTitle" placeholder="Requirement title" />
-            <textarea id="reqDesc" placeholder="Requirement details"></textarea>
-          </div>
-          <div class="buttonRow">
-            <button id="addReqBtn">Add</button>
-            <button id="promptBtn" class="secondary">Generate Prompt</button>
-            <button id="copyDiscordBtn" class="secondary">Copy</button>
-            <button id="openDiscordBtn" class="secondary">Discord</button>
-          </div>
-
-          <div class="outputBlock">
-            <h2>Prompt Output</h2>
-            <p id="artifactPath" class="muted"></p>
-            <div id="segments" class="segments empty">No prompt generated</div>
-          </div>
-
-          <div class="outputBlock">
-            <h2>Task Board</h2>
-            <input id="commitId" placeholder="OpenClaw A commit sha" />
-            <button id="closeSelectedBtn" class="secondary wide">Close Selected</button>
-            <div id="boardList" class="list empty">No requirements</div>
+          <div class="boardLayout">
+            <div class="panel">
+              <h2>New Requirement</h2>
+              <div class="formStack">
+                <input id="reqTitle" placeholder="Requirement title" />
+                <textarea id="reqDesc" placeholder="Requirement details"></textarea>
+              </div>
+              <button id="addReqBtn">Add Requirement</button>
+            </div>
+            <div class="panel">
+              <h2>Task Board</h2>
+              <input id="commitId" placeholder="OpenClaw A commit sha" />
+              <button id="closeSelectedBtn" class="secondary wide">Close Selected</button>
+              <div id="boardList" class="list empty">No requirements</div>
+            </div>
           </div>
         </section>
 
-        <aside class="panel context">
-          <h2>OpenClaw</h2>
-          <div class="statusCard">
-            <div class="statusLine">
-              <span id="openclawDot" class="dot"></span>
-              <strong id="openclawText">OpenClaw unknown</strong>
+        <section id="taskView" class="view">
+          <div class="viewHead">
+            <div>
+              <h2>Task Detail</h2>
+              <p class="muted">Generate a Discord-ready prompt for the selected requirement.</p>
             </div>
-            <p id="openclawMeta"></p>
+            <div class="buttonRow">
+              <button id="promptBtn">Generate Prompt</button>
+              <button id="copyDiscordBtn" class="secondary">Copy</button>
+              <button id="openDiscordBtn" class="secondary">Discord</button>
+            </div>
           </div>
+          <div class="panel">
+            <p id="artifactPath" class="muted"></p>
+            <div id="segments" class="segments empty">No prompt generated</div>
+          </div>
+        </section>
 
-          <h2>ClawHub Skills</h2>
-          <div id="skillsList" class="list empty">No skills loaded</div>
+        <section id="skillsView" class="view">
+          <div class="viewHead">
+            <div>
+              <h2>Private ClawHub Skills</h2>
+              <p class="muted">Connect to your private ClawHub, inspect skills, then ask a selected OpenClaw to install one through Tailscale.</p>
+            </div>
+            <button id="loadSkillsBtn">Load Skills</button>
+          </div>
+          <div class="split">
+            <div id="skillsList" class="cardsGrid empty">No skills loaded</div>
+            <div class="panel detailPanel">
+              <h2>Skill Detail</h2>
+              <div id="skillDetail" class="empty">Select a skill</div>
+              <input id="skillAgentId" placeholder="Target OpenClaw agent id (optional)" />
+              <button id="installSkillBtn" class="wide">Install on OpenClaw</button>
+            </div>
+          </div>
+        </section>
 
-          <h2>Discord Widget</h2>
-          <iframe id="discordWidget" class="discordWidget" title="Discord server widget" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
+        <section id="runtimesView" class="view">
+          <div class="viewHead">
+            <div>
+              <h2>Plugin Runtimes</h2>
+              <p class="muted">Compatibility descriptors only. MutiSolo does not execute arbitrary plugin code.</p>
+            </div>
+          </div>
+          <div id="runtimeList" class="cardsGrid empty">No runtimes loaded</div>
+        </section>
 
-          <h2>Plugin Runtimes</h2>
-          <div id="runtimeList" class="list empty">No runtimes loaded</div>
-        </aside>
+        <section id="connectionsView" class="view">
+          <div class="viewHead">
+            <div>
+              <h2>Connections</h2>
+              <p class="muted">OpenClaw, GitHub, Discord, private ClawHub, and LLM endpoints.</p>
+            </div>
+            <button id="saveConfigBtn">Save Connections</button>
+          </div>
+          <div class="connectionGrid panel">
+            <label>OpenClaw Tailscale URL<input id="openclawUrl" placeholder="http://100.x.y.z:18800" /></label>
+            <label>OpenClaw bearer token<input id="openclawToken" type="password" placeholder="optional" /></label>
+            <label>GitHub repository<input id="githubRepo" placeholder="https://github.com/user/repo" /></label>
+            <label>Discord channel or DM URL<input id="discordUrl" placeholder="https://discord.com/channels/..." /></label>
+            <label>Discord server widget URL<input id="discordWidgetUrl" placeholder="https://discordapp.com/widget?id=...&theme=dark" /></label>
+            <label>OpenClaw Discord BOT ID<input id="discordBotId" placeholder="1518540891617235114" /></label>
+            <label>Private ClawHub URL<input id="clawhubUrl" placeholder="https://clawhub.internal" /></label>
+            <label>LLM API URL<input id="llmUrl" placeholder="https://llm.internal/v1" /></label>
+          </div>
+          <div class="statusGrid">
+            <div class="panel">
+              <h2>OpenClaw</h2>
+              <div class="statusLine">
+                <span id="openclawDot" class="dot"></span>
+                <strong id="openclawText">OpenClaw unknown</strong>
+              </div>
+              <p id="openclawMeta" class="muted"></p>
+            </div>
+            <div class="panel">
+              <h2>Discord Widget</h2>
+              <iframe id="discordWidget" class="discordWidget" title="Discord server widget" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
+            </div>
+          </div>
+        </section>
       </section>
     </main>
     <script src="/app.js"></script>

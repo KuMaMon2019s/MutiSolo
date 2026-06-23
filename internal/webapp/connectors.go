@@ -82,6 +82,51 @@ func (c Connector) ListClawHubSkills(ctx context.Context, baseURL string) ([]Ski
 	return skills, nil
 }
 
+func (c Connector) GetClawHubSkill(ctx context.Context, baseURL, skillID string) (SkillSummary, error) {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if strings.TrimSpace(skillID) == "" {
+		return SkillSummary{}, fmt.Errorf("skill id is required")
+	}
+	if baseURL == "" || strings.Contains(baseURL, "example.com") {
+		return SkillSummary{ID: skillID, Description: "Configure a private ClawHub URL to load skill details."}, nil
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/skills/"+skillID, nil)
+	if err != nil {
+		return SkillSummary{}, err
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return SkillSummary{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return SkillSummary{}, fmt.Errorf("clawhub skill returned HTTP %d", resp.StatusCode)
+	}
+	var skill SkillSummary
+	if err := json.NewDecoder(resp.Body).Decode(&skill); err != nil {
+		return SkillSummary{}, err
+	}
+	if skill.ID == "" {
+		skill.ID = skillID
+	}
+	return skill, nil
+}
+
+func (c Connector) InstallSkillOnOpenClaw(ctx context.Context, openClawURL, token, clawHubURL string, req SkillInstallRequest) (SkillInstallResult, error) {
+	if strings.TrimSpace(req.SkillID) == "" {
+		return SkillInstallResult{}, fmt.Errorf("skill id is required")
+	}
+	prompt := fmt.Sprintf(`Install private ClawHub skill for this OpenClaw agent.
+
+Skill ID: %s
+ClawHub URL: %s
+Target agent: %s
+
+Use the local OpenClaw skill installer if available. Do not modify system architecture. Report installation result only.`, req.SkillID, strings.TrimSpace(clawHubURL), strings.TrimSpace(req.AgentID))
+	result, err := c.SendOpenClawPrompt(ctx, openClawURL, token, prompt)
+	return SkillInstallResult{SkillID: req.SkillID, Result: result}, err
+}
+
 func (c Connector) SendOpenClawPrompt(ctx context.Context, baseURL, token, prompt string) (SendResult, error) {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	result := SendResult{Endpoint: baseURL + "/message"}
