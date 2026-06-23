@@ -54,13 +54,34 @@
         <section id="boardView" class="view">
           <div class="viewHead">
             <div>
+              <p class="breadcrumb">Your projects / OpenClaw / Requirements</p>
               <h2>Project Board</h2>
               <p class="muted">Select requirements, paste OpenClaw A's commit SHA, and close them in bulk.</p>
             </div>
             <select id="projectSelect"></select>
           </div>
-          <div class="boardLayout">
-            <div class="panel">
+          <div class="trackerLayout">
+            <div class="kanbanPanel">
+              <div class="tabs">
+                <button class="tab active">Kanban</button>
+                <button class="tab">List</button>
+                <button class="tab">Timeline</button>
+                <button class="tab ghost">Filter</button>
+              </div>
+              <div id="boardList" class="kanbanBoard empty">No requirements</div>
+            </div>
+            <aside class="inboxPanel">
+              <h2>Agent Inbox</h2>
+              <div class="inboxTabs">
+                <button class="tab active">All</button>
+                <button class="tab">Tasks</button>
+                <button class="tab">Chat</button>
+              </div>
+              <div id="agentInbox" class="inboxList"></div>
+            </aside>
+          </div>
+          <div class="boardFooter">
+            <div class="panel compactPanel">
               <h2>New Requirement</h2>
               <div class="formStack">
                 <input id="reqTitle" placeholder="Requirement title" />
@@ -68,11 +89,10 @@
               </div>
               <button id="addReqBtn">Add Requirement</button>
             </div>
-            <div class="panel">
+            <div class="panel compactPanel">
               <h2>Task Board</h2>
               <input id="commitId" placeholder="OpenClaw A commit sha" />
               <button id="closeSelectedBtn" class="secondary wide">Close Selected</button>
-              <div id="boardList" class="list empty">No requirements</div>
             </div>
           </div>
         </section>

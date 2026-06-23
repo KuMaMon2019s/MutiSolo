@@ -267,31 +267,79 @@ function renderBoard() {
   const requirements = project ? project.requirements || [] : [];
   list.innerHTML = "";
   if (!requirements.length) {
-    list.className = "list empty";
+    list.className = "kanbanBoard empty";
     list.textContent = "No requirements";
+    renderAgentInbox([]);
     return;
   }
-  list.className = "list";
-  for (const req of requirements) {
-    const item = document.createElement("div");
-    item.className = "item";
-    item.innerHTML = `
-      <div class="itemRow">
-        <input type="checkbox" data-req-id="${escapeHtml(req.id)}" />
-        <button class="secondary" data-open-req="${escapeHtml(req.id)}">Open</button>
-        <div>
-          <strong>${escapeHtml(req.title)}</strong>
-          <span>${escapeHtml(req.status || "draft")}${req.commit_id ? ` - ${escapeHtml(req.commit_id)}` : ""}</span>
-        </div>
-      </div>`;
-    list.append(item);
+  list.className = "kanbanBoard";
+  const columns = [
+    { id: "draft", title: "BACKLOG", color: "low" },
+    { id: "sent", title: "TO DO", color: "medium" },
+    { id: "in_progress", title: "IN PROGRESS", color: "agent" },
+    { id: "closed", title: "DONE", color: "done" },
+  ];
+  for (const column of columns) {
+    const reqs = requirements.filter((req) => (req.status || "draft") === column.id || (column.id === "draft" && !req.status));
+    const lane = document.createElement("section");
+    lane.className = "kanbanColumn";
+    lane.innerHTML = `<div class="columnHead">${column.title} <span>${reqs.length}</span></div><div class="addLane">+</div>`;
+    for (const req of reqs) {
+      lane.append(renderIssueCard(req, column.color));
+    }
+    list.append(lane);
   }
+  renderAgentInbox(requirements);
   document.querySelectorAll("[data-open-req]").forEach((node) => {
     node.addEventListener("click", () => {
       state.selectedRequirement = node.dataset.openReq;
       showView("taskView");
     });
   });
+}
+
+function renderIssueCard(req, color) {
+  const card = document.createElement("article");
+  card.className = "issueCard";
+  const status = req.status || "draft";
+  const progress = status === "closed" ? "100%" : status === "in_progress" ? "55%" : status === "sent" ? "15%" : "0%";
+  card.innerHTML = `
+    <div class="issueTitle">${escapeHtml(req.title)}</div>
+    <div class="badges">
+      <span class="badge ${color}">${status === "closed" ? "Done" : status === "in_progress" ? "Medium" : "Low"}</span>
+      <span class="badge agent">OpenClaw</span>
+    </div>
+    <div class="issueMeta">
+      <span class="progressRing"></span>
+      <span class="muted">${progress}</span>
+      ${req.commit_id ? `<span class="muted">${escapeHtml(req.commit_id)}</span>` : ""}
+    </div>
+    <div class="avatars">
+      <span class="avatar">A</span>
+      <span class="muted">${escapeHtml(req.id.slice(0, 8))}</span>
+    </div>
+    <div class="itemRow">
+      <input type="checkbox" data-req-id="${escapeHtml(req.id)}" />
+      <button class="secondary" data-open-req="${escapeHtml(req.id)}">Open</button>
+    </div>`;
+  return card;
+}
+
+function renderAgentInbox(requirements) {
+  const inbox = el("agentInbox");
+  if (!inbox) return;
+  inbox.innerHTML = "";
+  const recent = requirements.slice(-6).reverse();
+  if (!recent.length) {
+    inbox.innerHTML = `<div class="empty">No agent activity</div>`;
+    return;
+  }
+  for (const req of recent) {
+    const item = document.createElement("div");
+    item.className = "inboxItem";
+    item.innerHTML = `<strong>OpenClaw A ${escapeHtml(req.status || "draft")}</strong><span class="muted">${escapeHtml(req.title)}</span>`;
+    inbox.append(item);
+  }
 }
 
 async function closeSelected() {
