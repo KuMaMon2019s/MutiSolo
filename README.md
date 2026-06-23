@@ -52,3 +52,4 @@ The matcher compares `task.required_caps` with `agent.skills`, ignores offline o
 - `Task`: `id`, `required_caps[]`, `status`
 - `Session`: `id`, `agent_id`, `task_id`, `status`
 - `Event`: `type`, `entity_id`, `payload`, `timestamp`
+# MutiSolo
