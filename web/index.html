@@ -9,7 +9,7 @@
   <body>
     <main class="appShell">
       <aside id="navRail" class="navRail">
-        <button id="collapseNavBtn" class="navToggle" title="Collapse menu">M</button>
+        <div class="navLogo" title="MutiSolo">M</div>
         <div class="statusPill">
           <strong id="todoRatio">0%</strong>
           <span>TO DO</span>
@@ -27,7 +27,7 @@
         <h2>Tracker</h2>
         <input class="searchInput" placeholder="Search..." />
         <nav class="sideNav">
-          <button class="sideLink active" data-view="projectsView">All project</button>
+          <button id="allProjectsBtn" class="sideLink active">All project</button>
         </nav>
         <div class="sideSection">
           <div class="sideTitle">Your Projects</div>
@@ -81,6 +81,12 @@
           </div>
           <div id="selectionToolbar" class="selectionToolbar hidden">
             <strong id="selectionCount">0 selected</strong>
+            <div class="moveBranchControls">
+              <select id="selectedBranchMoveSelect" class="moveBranchSelect" disabled>
+                <option value="">Select branch...</option>
+              </select>
+              <button id="moveSelectedBranchBtn" class="secondary" disabled>Move</button>
+            </div>
             <button id="closeSelectedBtn" class="secondary">Close</button>
           </div>
           <div class="kanbanPanel">
