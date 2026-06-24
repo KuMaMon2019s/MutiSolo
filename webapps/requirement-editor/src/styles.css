@@ -81,6 +81,11 @@ pre {
   padding: 20px;
 }
 
+.editorShell.embedded {
+  min-height: 100%;
+  padding: 0;
+}
+
 .editorTopbar,
 .editorPanel,
 .card {
@@ -138,7 +143,7 @@ pre {
 
 .editorGrid {
   display: grid;
-  grid-template-columns: minmax(520px, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -152,79 +157,23 @@ pre {
   min-height: 640px;
 }
 
+.embedded .editorPanel {
+  min-height: 640px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
 .bn-container {
   margin-top: 14px;
   min-height: 560px;
 }
 
-.sidePanel,
-.docList,
-.attachmentList {
-  display: grid;
-  gap: 12px;
-}
-
-.docCard {
-  display: grid;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--panel-2);
-  padding: 12px;
-}
-
-.iconButton {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-}
-
-.attachmentRow {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #10141a;
-  padding: 8px 10px;
-}
-
-.attachmentRow strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.attachmentRow span {
-  border-radius: 999px;
-  color: #11151b;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 3px 8px;
-}
-
-.attachmentRow span.image {
-  background: var(--green);
-}
-
-.attachmentRow span.file {
-  background: var(--orange);
-}
-
-.outputGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-top: 14px;
-}
-
 @media (max-width: 1100px) {
   .editorTopbar,
-  .editorGrid,
-  .outputGrid {
+  .editorGrid {
     grid-template-columns: 1fr;
   }
 

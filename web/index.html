@@ -123,23 +123,9 @@
             <section class="panel taskDetailPanel">
               <div class="panelHead">
                 <h2>Requirement</h2>
-                <div class="toolbar">
-                  <a class="buttonLike secondary" href="/apps/requirement-editor/" target="_blank" rel="noreferrer">Editor</a>
-                  <button id="saveTaskBtn" class="secondary">Save</button>
-                </div>
+                <span id="taskEditorMeta" class="muted"></span>
               </div>
-              <div class="formStack">
-                <input id="taskTitle" placeholder="Requirement title" />
-                <div class="priorityChoices taskPriorityChoices">
-                  <label><input type="radio" name="taskPriority" value="no_priority" /> No priority</label>
-                  <label><input type="radio" name="taskPriority" value="low" /> Low</label>
-                  <label><input type="radio" name="taskPriority" value="medium" /> Medium</label>
-                  <label><input type="radio" name="taskPriority" value="high" /> High</label>
-                  <label><input type="radio" name="taskPriority" value="urgent" /> Urgent</label>
-                </div>
-                <select id="taskAgentSelect"></select>
-                <textarea id="taskDesc" placeholder="Requirement detail"></textarea>
-              </div>
+              <iframe id="requirementEditorFrame" class="requirementEditorFrame" title="Requirement editor"></iframe>
             </section>
             <section class="panel promptPanel">
               <div class="panelHead">

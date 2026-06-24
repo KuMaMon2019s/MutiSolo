@@ -741,36 +741,27 @@ function renderTaskDetail() {
   const project = currentProject();
   const requirement = project ? currentRequirement(project) : null;
   if (!requirement) {
-    el("taskTitle").value = "";
-    el("taskDesc").value = "";
+    const frame = el("requirementEditorFrame");
+    if (frame) frame.removeAttribute("src");
+    const meta = el("taskEditorMeta");
+    if (meta) meta.textContent = "";
     renderAgentSelects();
     return;
   }
-  el("taskTitle").value = requirement.title || "";
-  el("taskDesc").value = requirement.description || "";
-  const priority = requirement.priority || "low";
-  const priorityInput = document.querySelector(`[name=taskPriority][value="${priority}"]`);
-  if (priorityInput) priorityInput.checked = true;
-  renderAgentSelect("taskAgentSelect", normalizeAgentID(requirement.agent_id || defaultAgentID()));
-}
-
-async function saveTaskDetail() {
-  const project = currentProject();
-  if (!project) throw new Error("Create or select a project first");
-  const requirement = currentRequirement(project);
-  if (!requirement) throw new Error("Select or create a requirement first");
-  const updated = await api(`/api/projects/${project.id}/requirements/${encodeURIComponent(requirement.id)}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      title: el("taskTitle").value.trim(),
-      description: el("taskDesc").value.trim(),
-      priority: selectedPriority("taskPriority"),
-      agent_id: selectedAgent("taskAgentSelect"),
-    }),
+  const meta = el("taskEditorMeta");
+  if (meta) meta.textContent = requirement.title || requirement.id;
+  const params = new URLSearchParams({
+    embed: "1",
+    project: project.id,
+    requirement: requirement.id,
+    title: requirement.title || "",
+    description: requirement.description || "",
   });
-  state.selectedRequirement = updated.id;
-  await loadState();
-  showTaskView();
+  const frame = el("requirementEditorFrame");
+  if (frame) {
+    const nextSrc = `/apps/requirement-editor/?${params.toString()}`;
+    if (frame.getAttribute("src") !== nextSrc) frame.setAttribute("src", nextSrc);
+  }
 }
 
 function renderSelectionToolbar() {
@@ -936,9 +927,6 @@ function renderAgentSelect(selectID, selectedAgent = "") {
 
 function renderAgentSelects() {
   renderAgentSelect("reqAgentSelect", defaultAgentID());
-  const project = currentProject();
-  const requirement = project ? currentRequirement(project) : null;
-  renderAgentSelect("taskAgentSelect", normalizeAgentID(requirement?.agent_id || defaultAgentID()));
 }
 
 function escapeHtml(value) {
@@ -1011,7 +999,6 @@ bind("kanbanTabBtn", async () => showKanbanTab());
 bind("branchTabBtn", async () => showBranchTab());
 bind("promptBtn", generatePrompt);
 bind("copyDiscordBtn", copyDiscordPrompt);
-bind("saveTaskBtn", saveTaskDetail);
 bind("pushBtn", pushGitHub);
 bind("closeSelectedBtn", closeSelected);
 bind("moveSelectedBranchBtn", moveSelectedRequirementToBranch);

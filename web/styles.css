@@ -473,6 +473,20 @@ label,
   min-height: 680px;
 }
 
+.taskDetailPanel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.requirementEditorFrame {
+  width: 100%;
+  min-height: 640px;
+  height: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: #15191f;
+}
+
 .panelHead {
   display: flex;
   align-items: flex-start;
@@ -695,19 +709,6 @@ button {
   white-space: nowrap;
 }
 
-.buttonLike {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  color: white;
-  font-weight: 650;
-  min-height: 38px;
-  padding: 9px 14px;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
 button:hover {
   background: #3a78f5;
 }
@@ -721,10 +722,6 @@ button:hover {
 .secondary:hover,
 .tab:hover {
   background: #2a3342;
-}
-
-.buttonLike.secondary {
-  color: #c9d1dd;
 }
 
 .wide {
