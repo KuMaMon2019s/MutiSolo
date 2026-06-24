@@ -580,7 +580,6 @@ function renderIssueCard(req, color) {
   card.className = "issueCard";
   card.draggable = true;
   card.addEventListener("dragstart", (event) => event.dataTransfer.setData("text/plain", req.id));
-  const status = req.status || "draft";
   const agentID = normalizeAgentID(req.agent_id || defaultAgentID());
   card.innerHTML = `
     <div class="issueBody">
@@ -598,18 +597,31 @@ function renderIssueCard(req, color) {
     </div>`;
   card.addEventListener("click", (event) => {
     if (event.target.closest("input,select")) return;
+    if (event.detail >= 2) {
+      event.preventDefault();
+      openRequirementDetail(req.id);
+      return;
+    }
     const selected = !state.selectedRequirements.has(req.id);
     toggleRequirementSelection(req.id, selected);
     wrap.classList.toggle("selected", selected);
     const checkbox = wrap.querySelector("[data-select-req]");
     if (checkbox) checkbox.checked = selected;
   });
-  card.addEventListener("dblclick", () => {
-    state.selectedRequirement = req.id;
-    showTaskView();
+  card.addEventListener("dblclick", (event) => {
+    event.preventDefault();
+    openRequirementDetail(req.id);
   });
   wrap.append(card);
   return wrap;
+}
+
+function openRequirementDetail(reqID) {
+  if (!reqID) return;
+  state.selectedRequirement = reqID;
+  state.selectedRequirements.clear();
+  renderSelectionToolbar();
+  showTaskView();
 }
 
 function renderBranchList() {
