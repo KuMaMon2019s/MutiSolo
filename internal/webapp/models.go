@@ -55,6 +55,26 @@ type OpenClawStatus struct {
 	CheckedAt string `json:"checked_at"`
 }
 
+type TailscaleDevice struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DNSName     string `json:"dns_name,omitempty"`
+	OS          string `json:"os,omitempty"`
+	IP          string `json:"ip,omitempty"`
+	Online      bool   `json:"online"`
+	Active      bool   `json:"active"`
+	Self        bool   `json:"self"`
+	LastSeen    string `json:"last_seen,omitempty"`
+	OpenClawURL string `json:"openclaw_url,omitempty"`
+}
+
+type TailscaleDeviceStatus struct {
+	Tailnet   string            `json:"tailnet,omitempty"`
+	Devices   []TailscaleDevice `json:"devices"`
+	Error     string            `json:"error,omitempty"`
+	CheckedAt string            `json:"checked_at"`
+}
+
 type SkillSummary struct {
 	ID           string   `json:"id"`
 	Name         string   `json:"name,omitempty"`

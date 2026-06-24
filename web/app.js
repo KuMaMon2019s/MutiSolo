@@ -7,6 +7,8 @@ const state = {
   selectedRequirements: new Set(),
   newRequirementStatus: "draft",
   boardTab: "kanban",
+  tailscaleDevices: [],
+  tailscaleError: "",
   discordText: "",
 };
 
@@ -38,6 +40,10 @@ async function loadState() {
   renderProjects();
   renderBoard();
   renderTodoRatio();
+  loadTailscaleDevices().catch((error) => {
+    state.tailscaleError = error.message;
+    renderOpenClawStrip();
+  });
 }
 
 function showView(viewId) {
@@ -209,7 +215,7 @@ function showDiscordPreview() {
 }
 
 async function refreshConnections() {
-  await Promise.allSettled([loadOpenClawStatus(), loadSkills(), loadRuntimes()]);
+  await Promise.allSettled([loadOpenClawStatus(), loadTailscaleDevices(), loadSkills(), loadRuntimes()]);
 }
 
 async function loadOpenClawStatus() {
@@ -228,6 +234,47 @@ async function loadOpenClawStatus() {
     text.textContent = "OpenClaw offline";
     meta.textContent = error.message;
   }
+}
+
+async function loadTailscaleDevices() {
+  const status = await api("/api/tailscale/devices");
+  state.tailscaleDevices = status.devices || [];
+  state.tailscaleError = status.error || "";
+  renderOpenClawStrip(status.tailnet || "");
+}
+
+function renderOpenClawStrip(tailnet = "") {
+  const strip = el("openClawStrip");
+  if (!strip) return;
+  strip.innerHTML = "";
+  const online = state.tailscaleDevices.filter((device) => device.online);
+  if (!online.length) {
+    strip.className = "openClawStrip empty";
+    strip.textContent = state.tailscaleError ? `Tailscale unavailable: ${state.tailscaleError}` : "No online OpenClaw devices";
+    return;
+  }
+  strip.className = "openClawStrip";
+  const label = document.createElement("span");
+  label.className = "stripLabel";
+  label.textContent = tailnet ? `Online OpenClaw · ${tailnet}` : "Online OpenClaw";
+  strip.append(label);
+  for (const device of online) {
+    const node = document.createElement("button");
+    node.className = "openClawChip";
+    node.title = device.openclaw_url || device.dns_name || device.ip || device.name;
+    node.innerHTML = `<span class="onlineDot"></span><strong>${escapeHtml(shortDeviceName(device.name))}</strong><span>${escapeHtml(device.ip || "")}</span>`;
+    if (device.openclaw_url) {
+      node.addEventListener("click", () => {
+        el("openclawUrl").value = device.openclaw_url;
+        saveConfig().catch((error) => alert(error.message));
+      });
+    }
+    strip.append(node);
+  }
+}
+
+function shortDeviceName(name) {
+  return String(name || "OpenClaw").replace(/的MacBook Pro|的Mac mini|MacBook Pro|Mac mini/g, "").trim() || name || "OpenClaw";
 }
 
 async function loadSkills() {

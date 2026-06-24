@@ -1,12 +1,14 @@
 package webapp
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type Server struct {
@@ -29,6 +31,7 @@ func (s Server) Handler() http.Handler {
 	mux.HandleFunc("/api/state", s.handleState)
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/openclaw/status", s.handleOpenClawStatus)
+	mux.HandleFunc("/api/tailscale/devices", s.handleTailscaleDevices)
 	mux.HandleFunc("/api/clawhub/skills", s.handleClawHubSkills)
 	mux.HandleFunc("/api/clawhub/skills/", s.handleClawHubSkillActions)
 	mux.HandleFunc("/api/plugin-runtimes", s.handlePluginRuntimes)
@@ -145,6 +148,16 @@ func (s Server) handleOpenClawStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, s.connector.CheckOpenClaw(r.Context(), state.Config.OpenClawBaseURL))
+}
+
+func (s Server) handleTailscaleDevices(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	writeJSON(w, ReadTailscaleDevices(ctx))
 }
 
 func (s Server) handleClawHubSkills(w http.ResponseWriter, r *http.Request) {
