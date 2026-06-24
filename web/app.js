@@ -3,6 +3,8 @@ const state = {
   selectedProject: "",
   selectedRequirement: "",
   selectedSkill: "",
+  selectedRequirements: new Set(),
+  newRequirementStatus: "draft",
   discordText: "",
 };
 
@@ -64,6 +66,7 @@ function renderProjects() {
     card.innerHTML = `<strong>${escapeHtml(project.name)}</strong><span>${escapeHtml(project.description || "")}</span><p class="muted">${(project.requirements || []).length} requirement point(s)</p>`;
     card.addEventListener("click", () => {
       state.selectedProject = project.id;
+      state.selectedRequirements.clear();
       select.value = project.id;
       pickLatestRequirement();
       renderBoard();
@@ -92,6 +95,7 @@ function renderSideProjects() {
     button.textContent = project.name;
     button.addEventListener("click", () => {
       state.selectedProject = project.id;
+      state.selectedRequirements.clear();
       el("projectSelect").value = project.id;
       state.selectedRequirement = "";
       pickLatestRequirement();
@@ -134,6 +138,27 @@ function renderDiscordWidget() {
     return;
   }
   iframe.src = url;
+}
+
+function connectDiscordPanel() {
+  const url = el("discordWidgetUrl").value.trim();
+  el("discordPreviewShell").classList.add("hidden");
+  el("discordEmbedShell").classList.remove("hidden");
+  const iframe = el("taskDiscordWidget");
+  const hint = el("discordConnectHint");
+  if (!url) {
+    iframe.classList.add("hidden");
+    hint.classList.remove("hidden");
+    return;
+  }
+  iframe.classList.remove("hidden");
+  hint.classList.add("hidden");
+  iframe.src = url;
+}
+
+function showDiscordPreview() {
+  el("discordEmbedShell").classList.add("hidden");
+  el("discordPreviewShell").classList.remove("hidden");
 }
 
 async function refreshConnections() {
@@ -233,11 +258,15 @@ async function addRequirement() {
     body: JSON.stringify({
       title: el("reqTitle").value.trim(),
       description: el("reqDesc").value.trim(),
+      status: state.newRequirementStatus || "draft",
     }),
   });
   state.selectedRequirement = req.id;
+  closeRequirementModal();
+  el("reqTitle").value = "";
+  el("reqDesc").value = "";
   await loadState();
-  showView("taskView");
+  showView("boardView");
 }
 
 async function generatePrompt() {
@@ -280,8 +309,7 @@ async function copyDiscordPrompt() {
 }
 
 function openDiscord() {
-  const url = el("discordUrl").value.trim() || "https://discord.com/app";
-  window.open(url, "_blank", "noopener");
+  connectDiscordPanel();
 }
 
 async function pushGitHub() {
@@ -307,7 +335,7 @@ function renderBoard() {
   if (!requirements.length) {
     list.className = "kanbanBoard empty";
     list.textContent = "No requirements";
-    renderAgentInbox([]);
+    renderSelectionToolbar();
     return;
   }
   list.className = "kanbanBoard";
@@ -321,24 +349,35 @@ function renderBoard() {
     const reqs = requirements.filter((req) => (req.status || "draft") === column.id || (column.id === "draft" && !req.status));
     const lane = document.createElement("section");
     lane.className = "kanbanColumn";
-    lane.innerHTML = `<div class="columnHead">${column.title} <span>${reqs.length}</span></div><div class="addLane">+</div>`;
+    lane.dataset.status = column.id;
+    lane.innerHTML = `<div class="columnHead">${column.title} <span>${reqs.length}</span></div><button class="addLane" data-add-status="${column.id}">+</button>`;
+    lane.addEventListener("dragover", (event) => event.preventDefault());
+    lane.addEventListener("drop", (event) => moveRequirement(event.dataTransfer.getData("text/plain"), column.id));
     for (const req of reqs) {
       lane.append(renderIssueCard(req, column.color));
     }
     list.append(lane);
   }
-  renderAgentInbox(requirements);
   document.querySelectorAll("[data-open-req]").forEach((node) => {
     node.addEventListener("click", () => {
       state.selectedRequirement = node.dataset.openReq;
       showView("taskView");
     });
   });
+  document.querySelectorAll("[data-select-req]").forEach((node) => {
+    node.addEventListener("change", () => toggleRequirementSelection(node.dataset.selectReq, node.checked));
+  });
+  document.querySelectorAll("[data-add-status]").forEach((node) => {
+    node.addEventListener("click", () => openRequirementModal(node.dataset.addStatus));
+  });
+  renderSelectionToolbar();
 }
 
 function renderIssueCard(req, color) {
   const card = document.createElement("article");
-  card.className = "issueCard";
+  card.className = `issueCard ${state.selectedRequirements.has(req.id) ? "selected" : ""}`;
+  card.draggable = true;
+  card.addEventListener("dragstart", (event) => event.dataTransfer.setData("text/plain", req.id));
   const status = req.status || "draft";
   const progress = status === "closed" ? "100%" : status === "in_progress" ? "55%" : status === "sent" ? "15%" : "0%";
   card.innerHTML = `
@@ -357,41 +396,59 @@ function renderIssueCard(req, color) {
       <span class="muted">${escapeHtml(req.id.slice(0, 8))}</span>
     </div>
     <div class="itemRow">
-      <input type="checkbox" data-req-id="${escapeHtml(req.id)}" />
+      <input type="checkbox" data-select-req="${escapeHtml(req.id)}" ${state.selectedRequirements.has(req.id) ? "checked" : ""} />
       <button class="secondary" data-open-req="${escapeHtml(req.id)}">Open</button>
     </div>`;
   return card;
 }
 
-function renderAgentInbox(requirements) {
-  const inbox = el("agentInbox");
-  if (!inbox) return;
-  inbox.innerHTML = "";
-  const recent = requirements.slice(-6).reverse();
-  if (!recent.length) {
-    inbox.innerHTML = `<div class="empty">No agent activity</div>`;
-    return;
+function toggleRequirementSelection(reqID, selected) {
+  if (selected) {
+    state.selectedRequirements.add(reqID);
+  } else {
+    state.selectedRequirements.delete(reqID);
   }
-  for (const req of recent) {
-    const item = document.createElement("div");
-    item.className = "inboxItem";
-    item.innerHTML = `<strong>OpenClaw A ${escapeHtml(req.status || "draft")}</strong><span class="muted">${escapeHtml(req.title)}</span>`;
-    inbox.append(item);
-  }
+  renderSelectionToolbar();
 }
 
 async function closeSelected() {
   const project = currentProject();
   if (!project) throw new Error("Create or select a project first");
-  const ids = [...document.querySelectorAll("[data-req-id]:checked")].map((node) => node.dataset.reqId);
+  const ids = [...state.selectedRequirements];
   if (!ids.length) throw new Error("Select at least one requirement");
-  const commitId = el("commitId").value.trim();
-  if (!commitId) throw new Error("Paste OpenClaw A commit sha first");
   await api(`/api/projects/${project.id}/board`, {
     method: "POST",
-    body: JSON.stringify({ requirement_ids: ids, commit_id: commitId, status: "closed" }),
+    body: JSON.stringify({ requirement_ids: ids, status: "closed" }),
+  });
+  state.selectedRequirements.clear();
+  await loadState();
+}
+
+async function moveRequirement(reqID, status) {
+  if (!reqID || !status) return;
+  const project = currentProject();
+  if (!project) return;
+  await api(`/api/projects/${project.id}/board`, {
+    method: "POST",
+    body: JSON.stringify({ requirement_ids: [reqID], status }),
   });
   await loadState();
+}
+
+function renderSelectionToolbar() {
+  const count = state.selectedRequirements.size;
+  el("selectionToolbar").classList.toggle("hidden", count === 0);
+  el("selectionCount").textContent = `${count} selected`;
+}
+
+function openRequirementModal(status = "draft") {
+  state.newRequirementStatus = status;
+  el("requirementModal").classList.remove("hidden");
+  el("reqTitle").focus();
+}
+
+function closeRequirementModal() {
+  el("requirementModal").classList.add("hidden");
 }
 
 function escapeHtml(value) {
@@ -418,6 +475,7 @@ document.querySelectorAll("[data-view]").forEach((node) => {
 el("projectSelect").addEventListener("change", () => {
   state.selectedProject = el("projectSelect").value;
   state.selectedRequirement = "";
+  state.selectedRequirements.clear();
   pickLatestRequirement();
   renderBoard();
 });
@@ -430,9 +488,12 @@ bind("refreshBtn", async () => {
 bind("saveConfigBtn", saveConfig);
 bind("createProjectBtn", createProject);
 bind("addReqBtn", addRequirement);
+bind("openRequirementModalBtn", async () => openRequirementModal("draft"));
+bind("closeRequirementModalBtn", async () => closeRequirementModal());
 bind("promptBtn", generatePrompt);
 bind("copyDiscordBtn", copyDiscordPrompt);
 bind("openDiscordBtn", async () => openDiscord());
+bind("closeDiscordEmbedBtn", async () => showDiscordPreview());
 bind("pushBtn", pushGitHub);
 bind("closeSelectedBtn", closeSelected);
 bind("loadSkillsBtn", loadSkills);

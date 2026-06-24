@@ -34,12 +34,6 @@
           <div class="sideTitle">Your Projects</div>
           <div id="sideProjectLinks" class="sideProjectLinks empty">No projects</div>
         </div>
-        <div class="sideSection">
-          <div class="sideTitle">Resources</div>
-          <button class="sideLink" data-view="skillsView">Private ClawHub</button>
-          <button class="sideLink" data-view="runtimesView">Plugin runtimes</button>
-          <button class="sideLink" data-view="connectionsView">Connections</button>
-        </div>
       </aside>
 
       <section class="mainArea">
@@ -78,44 +72,25 @@
             <div>
               <p class="breadcrumb">Your projects / OpenClaw / Requirements</p>
               <h2>Project Board</h2>
-              <p class="muted">Select requirements, paste OpenClaw A's commit SHA, and close them in bulk.</p>
+              <p class="muted">Select requirement cards, move them across lanes, or archive them in bulk.</p>
             </div>
-            <select id="projectSelect"></select>
+            <div class="buttonRow">
+              <select id="projectSelect"></select>
+              <button id="openRequirementModalBtn">New Requirement</button>
+            </div>
           </div>
-          <div class="trackerLayout">
-            <div class="kanbanPanel">
-              <div class="tabs">
-                <button class="tab active">Kanban</button>
-                <button class="tab">List</button>
-                <button class="tab">Timeline</button>
-                <button class="tab ghost">Filter</button>
-              </div>
-              <div id="boardList" class="kanbanBoard empty">No requirements</div>
-            </div>
-            <aside class="inboxPanel">
-              <h2>Agent Inbox</h2>
-              <div class="inboxTabs">
-                <button class="tab active">All</button>
-                <button class="tab">Tasks</button>
-                <button class="tab">Chat</button>
-              </div>
-              <div id="agentInbox" class="inboxList"></div>
-            </aside>
+          <div id="selectionToolbar" class="selectionToolbar hidden">
+            <strong id="selectionCount">0 selected</strong>
+            <button id="closeSelectedBtn" class="secondary">Close</button>
           </div>
-          <div class="boardFooter">
-            <div class="panel compactPanel">
-              <h2>New Requirement</h2>
-              <div class="formStack">
-                <input id="reqTitle" placeholder="Requirement title" />
-                <textarea id="reqDesc" placeholder="Requirement details"></textarea>
-              </div>
-              <button id="addReqBtn">Add Requirement</button>
+          <div class="kanbanPanel">
+            <div class="tabs">
+              <button class="tab active">Kanban</button>
+              <button class="tab">List</button>
+              <button class="tab">Timeline</button>
+              <button class="tab ghost">Filter</button>
             </div>
-            <div class="panel compactPanel">
-              <h2>Task Board</h2>
-              <input id="commitId" placeholder="OpenClaw A commit sha" />
-              <button id="closeSelectedBtn" class="secondary wide">Close Selected</button>
-            </div>
+            <div id="boardList" class="kanbanBoard empty">No requirements</div>
           </div>
         </section>
 
@@ -140,8 +115,8 @@
               </div>
               <div id="segments" class="segments empty">No prompt generated</div>
             </section>
-            <section class="discordPanel">
-              <div class="discordShell">
+            <section id="discordPanel" class="discordPanel">
+              <div id="discordPreviewShell" class="discordShell">
                 <aside class="discordServers">
                   <div class="discordBubble active">M</div>
                   <div class="discordBubble">A</div>
@@ -167,6 +142,19 @@
                     <input value="Message @OpenClaw A" readonly />
                   </div>
                 </section>
+              </div>
+              <div id="discordEmbedShell" class="discordEmbedShell hidden">
+                <div class="discordEmbedHead">
+                  <div>
+                    <strong>Discord connection</strong>
+                    <p class="muted">Server widget presence and navigation for your OpenClaw Discord channel.</p>
+                  </div>
+                  <button id="closeDiscordEmbedBtn" class="secondary">Preview</button>
+                </div>
+                <iframe id="taskDiscordWidget" class="taskDiscordWidget" title="Discord server widget" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
+                <div id="discordConnectHint" class="discordConnectHint hidden">
+                  Configure a Discord server widget URL on the Connections page, then open this panel again.
+                </div>
               </div>
             </section>
           </div>
@@ -235,6 +223,20 @@
           </div>
         </section>
       </section>
+
+      <div id="requirementModal" class="modalOverlay hidden">
+        <section class="modal">
+          <div class="modalHead">
+            <h2>New Requirement</h2>
+            <button id="closeRequirementModalBtn" class="secondary">Close</button>
+          </div>
+          <div class="formStack">
+            <input id="reqTitle" placeholder="Requirement title" />
+            <textarea id="reqDesc" placeholder="Requirement detail"></textarea>
+          </div>
+          <button id="addReqBtn">Add</button>
+        </section>
+      </div>
     </main>
     <script src="/app.js"></script>
   </body>
