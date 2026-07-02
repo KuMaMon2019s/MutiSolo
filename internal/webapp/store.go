@@ -25,7 +25,7 @@ func NewStore(path string) Store {
 }
 
 func DefaultStatePath() string {
-	if path := os.Getenv("MUTISOLO_WEB_STATE"); path != "" {
+	if path := os.Getenv("MUTESOLO_WEB_STATE"); path != "" {
 		return path
 	}
 	return ".openclaw/web-state.json"

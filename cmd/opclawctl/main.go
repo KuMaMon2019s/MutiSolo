@@ -9,8 +9,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	controllayer "openclaw-coordination/control_layer"
-	"openclaw-coordination/internal/coordination"
+	controllayer "Mutesolo/control_layer"
+	"Mutesolo/internal/coordination"
 )
 
 func main() {

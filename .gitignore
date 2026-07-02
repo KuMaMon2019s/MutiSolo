@@ -1,9 +1,11 @@
 .openclaw/
+.venv-mineru/
 .cache/
 .gocache/
 artifacts/*.json
 /opclawctl
 /mutisolo-web
+/mutesolo-web
 node_modules/
 webapps/**/dist/
 webapps/**/.vite/

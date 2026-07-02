@@ -10,7 +10,8 @@ type Config struct {
 	DiscordBotID     string `json:"discord_bot_id,omitempty"`
 	GitHubRepo       string `json:"github_repo"`
 	ClawHubBaseURL   string `json:"clawhub_base_url"`
-	LLMBaseURL       string `json:"llm_base_url"`
+	LLMAPIKey        string `json:"llm_api_key,omitempty"`
+	LLMLocked        bool   `json:"llm_locked"`
 }
 
 type Project struct {
@@ -107,6 +108,27 @@ type PromptResult struct {
 	Segments      []string `json:"segments"`
 	ArtifactPath  string   `json:"artifact_path"`
 	DiscordText   string   `json:"discord_text"`
+	Prompt        string   `json:"prompt,omitempty"`
+}
+
+type ProjectPromptRequest struct {
+	RequirementID string                        `json:"requirement_id"`
+	Blocks        []map[string]any              `json:"blocks"`
+	TencentDocs   []RequirementEditorTencentDoc `json:"tencentDocs"`
+	Attachments   []RequirementEditorAttachment `json:"attachments"`
+	PlainText     string                        `json:"plainText"`
+	LLM           LLMRequest                    `json:"llm"`
+}
+
+type LLMRequest struct {
+	Provider string `json:"provider,omitempty"`
+	Model    string `json:"model,omitempty"`
+	APIKey   string `json:"api_key"`
+	BaseURL  string `json:"base_url,omitempty"`
+}
+
+type LLMTestRequest struct {
+	LLM LLMRequest `json:"llm"`
 }
 
 type RequirementEditorPromptRequest struct {
@@ -124,12 +146,14 @@ type RequirementEditorTencentDoc struct {
 }
 
 type RequirementEditorAttachment struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	MIMEType string `json:"mimeType"`
-	Size     int64  `json:"size"`
-	Kind     string `json:"kind"`
-	Source   string `json:"source"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	MIMEType   string `json:"mimeType"`
+	Size       int64  `json:"size"`
+	Kind       string `json:"kind"`
+	URL        string `json:"url,omitempty"`
+	StorageKey string `json:"storageKey,omitempty"`
+	Source     string `json:"source"`
 }
 
 type SendResult struct {

@@ -19,29 +19,29 @@ type Attachment = {
   mimeType: string;
   size: number;
   kind: "image" | "file";
-  objectUrl: string;
+  url: string;
+  storageKey?: string;
+  source: string;
 };
 
-type ExportedAttachment = Omit<Attachment, "objectUrl"> & {
-  source: "local_browser_attachment";
-};
+type ExportedAttachment = Attachment;
 
 type EditorContext = {
   schemaVersion: 1;
-  source: "mutisolo-requirement-editor";
+  source: "Mutesolo-requirement-editor";
   blocks: Block[];
   plainText: string;
   tencentDocs: TencentDoc[];
   attachments: ExportedAttachment[];
 };
 
-const defaultDraftKey = "mutisolo.requirementEditor.draft.v1";
+const defaultDraftKey = "Mutesolo.requirementEditor.draft.v1";
 
 function draftKeyFromSearch(search: string) {
   const params = new URLSearchParams(search);
   const project = params.get("project") || "local";
   const requirement = params.get("requirement") || "draft";
-  return `mutisolo.requirementEditor.${project}.${requirement}.v1`;
+  return `Mutesolo.requirementEditor.${project}.${requirement}.v1`;
 }
 
 function starterBlocksFromSearch(search: string): PartialBlock[] {
@@ -71,22 +71,31 @@ function readDraft(draftKey: string): { blocks?: PartialBlock[]; tencentDocs?: T
   }
 }
 
-function makeAttachment(file: File, objectUrl: string): Attachment {
-  return {
-    id: crypto.randomUUID(),
-    name: file.name,
-    mimeType: file.type || "application/octet-stream",
-    size: file.size,
-    kind: file.type.startsWith("image/") ? "image" : "file",
-    objectUrl
-  };
+function sanitizeAttachments(attachments: Attachment[]): ExportedAttachment[] {
+  return attachments.filter((attachment) => Boolean(attachment.url));
 }
 
-function sanitizeAttachments(attachments: Attachment[]): ExportedAttachment[] {
-  return attachments.map(({ objectUrl: _objectUrl, ...attachment }) => ({
-    ...attachment,
-    source: "local_browser_attachment"
-  }));
+async function uploadAsset(file: File): Promise<Attachment> {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch("/api/assets", {
+    method: "POST",
+    body
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "Upload failed");
+  }
+  return {
+    id: data.id || crypto.randomUUID(),
+    name: data.name || file.name,
+    mimeType: data.mimeType || file.type || "application/octet-stream",
+    size: data.size || file.size,
+    kind: data.kind === "image" ? "image" : "file",
+    url: data.url,
+    storageKey: data.storageKey,
+    source: data.source || "minio"
+  };
 }
 
 function textFromInlineContent(content: unknown): string {
@@ -139,12 +148,13 @@ export function RequirementEditor() {
   const [attachments, setAttachments] = useState<Attachment[]>(draft.attachments || []);
 
   const uploadFile = useCallback(async (file: File) => {
-    const objectUrl = URL.createObjectURL(file);
-    const attachment = makeAttachment(file, objectUrl);
+    const attachment = await uploadAsset(file);
     setAttachments((current) => [...current, attachment]);
     return {
-      url: objectUrl,
-      name: file.name
+      props: {
+        url: attachment.url,
+        name: attachment.name
+      }
     };
   }, []);
 
@@ -160,7 +170,7 @@ export function RequirementEditor() {
     const currentBlocks = editor.document as Block[];
     return {
       schemaVersion: 1,
-      source: "mutisolo-requirement-editor",
+      source: "Mutesolo-requirement-editor",
       blocks: currentBlocks,
       plainText: buildPlainText(currentBlocks),
       tencentDocs: tencentDocs.filter((doc) => doc.title.trim() || doc.url.trim() || doc.readInstruction.trim()),
@@ -198,7 +208,7 @@ export function RequirementEditor() {
     );
     window.parent.postMessage(
       {
-        type: "mutisolo.requirementEditor.height",
+        type: "Mutesolo.requirementEditor.height",
         height: Math.ceil(height)
       },
       window.location.origin
@@ -213,12 +223,31 @@ export function RequirementEditor() {
     return () => resizeObserver.disconnect();
   }, [postHeight]);
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== "Mutesolo.requirementEditor.requestContext") return;
+      const context = buildContext();
+      persistDraft(editor.document as Block[]);
+      window.parent.postMessage(
+        {
+          type: "Mutesolo.requirementEditor.context",
+          requestId: event.data.requestId,
+          context
+        },
+        window.location.origin
+      );
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [buildContext, editor, persistDraft]);
+
   return (
     <main className={`editorShell ${isEmbedded ? "embedded" : ""}`}>
       {!isEmbedded && (
         <header className="editorTopbar">
           <div>
-            <p className="eyebrow">MutiSolo Requirement</p>
+            <p className="eyebrow">Mutesolo Requirement</p>
             <h1>Requirement Detail</h1>
             <p>Use BlockNote to capture requirement content.</p>
           </div>

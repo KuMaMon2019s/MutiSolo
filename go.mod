@@ -1,3 +1,3 @@
-module openclaw-coordination
+module Mutesolo
 
 go 1.22

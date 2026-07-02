@@ -140,7 +140,7 @@ func (c Connector) SendOpenClawPrompt(ctx context.Context, baseURL, token, promp
 	body, err := json.Marshal(map[string]any{
 		"message": prompt,
 		"metadata": map[string]string{
-			"source": "mutisolo-coordination-layer",
+			"source": "Mutesolo-coordination-layer",
 		},
 	})
 	if err != nil {

@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"openclaw-coordination/internal/webapp"
+	"Mutesolo/internal/webapp"
 )
 
 func main() {
@@ -16,6 +16,6 @@ func main() {
 	flag.Parse()
 
 	server := webapp.NewServer(webapp.NewStore(*statePath), *staticDir)
-	fmt.Printf("MutiSolo web console: http://%s\n", *addr)
+	fmt.Printf("Mutesolo web console: http://%s\n", *addr)
 	log.Fatal(http.ListenAndServe(*addr, server.Handler()))
 }

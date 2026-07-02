@@ -287,6 +287,7 @@ body {
 }
 
 .topbar {
+  display: none;
   background: rgba(14, 17, 22, 0.86);
   border: 1px solid var(--line-soft);
   border-radius: 16px;
@@ -445,6 +446,75 @@ label,
 .segments {
   display: grid;
   gap: 8px;
+}
+
+.llmForm {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto auto;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.llmForm label {
+  display: grid;
+  gap: 6px;
+  font-weight: 750;
+}
+
+.llmForm input:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.llmTestStatus {
+  min-height: 18px;
+  margin-bottom: 12px;
+}
+
+.llmTestStatus.ok {
+  color: var(--green);
+}
+
+.llmTestStatus.bad {
+  color: var(--orange);
+}
+
+.promptProgress {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #2a3340;
+  border-radius: 12px;
+  background: #111821;
+  padding: 10px;
+}
+
+.progressMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.progressTrack {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #080c12;
+  box-shadow: inset 0 0 0 1px #252d38;
+}
+
+.progressTrack span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  transition: width 180ms ease;
 }
 
 .cardsGrid {
@@ -1155,7 +1225,8 @@ pre {
   .taskSplit,
   .formGrid,
   .connectionGrid,
-  .statusGrid {
+  .statusGrid,
+  .llmForm {
     grid-template-columns: 1fr;
   }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +29,7 @@ func NewServer(store Store, staticDir string) Server {
 
 func (s Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(envOrDefault("MUTESOLO_ASSET_FALLBACK_DIR", ".openclaw/assets")))))
 	mux.Handle("/apps/requirement-editor/", http.StripPrefix("/apps/requirement-editor/", http.FileServer(http.Dir(filepath.Join("webapps", "requirement-editor", "dist")))))
 	mux.Handle("/", http.FileServer(http.Dir(s.staticDir)))
 	mux.HandleFunc("/api/state", s.handleState)
@@ -37,11 +39,51 @@ func (s Server) Handler() http.Handler {
 	mux.HandleFunc("/api/clawhub/skills", s.handleClawHubSkills)
 	mux.HandleFunc("/api/clawhub/skills/", s.handleClawHubSkillActions)
 	mux.HandleFunc("/api/plugin-runtimes", s.handlePluginRuntimes)
+	mux.HandleFunc("/api/assets", s.handleAssets)
+	mux.HandleFunc("/api/documents/parse", s.handleDocumentParse)
+	mux.HandleFunc("/api/llm/test", s.handleLLMTest)
 	mux.HandleFunc("/api/projects", s.handleProjects)
 	mux.HandleFunc("/api/projects/", s.handleProjectActions)
 	mux.HandleFunc("/api/generate-prompt", s.handleGeneratePrompt)
 	mux.HandleFunc("/api/github/push", s.handleGitHubPush)
 	return mux
+}
+
+func (s Server) handleAssets(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxAssetUploadBytes+1024*1024)
+	if err := r.ParseMultipartForm(maxAssetUploadBytes); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid asset upload: "+err.Error())
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "file is required")
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, maxAssetUploadBytes+1))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "read file: "+err.Error())
+		return
+	}
+	if len(data) > maxAssetUploadBytes {
+		writeError(w, http.StatusRequestEntityTooLarge, "asset exceeds 32 MiB")
+		return
+	}
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = http.DetectContentType(data)
+	}
+	result, err := AssetStorageFromEnv().Upload(r.Context(), header.Filename, contentType, data)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, result)
 }
 
 func (s Server) handleClawHubSkillActions(w http.ResponseWriter, r *http.Request) {
@@ -332,9 +374,7 @@ func (s Server) handlePrompt(w http.ResponseWriter, r *http.Request, projectID s
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	var input struct {
-		RequirementID string `json:"requirement_id"`
-	}
+	var input ProjectPromptRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -354,7 +394,21 @@ func (s Server) handlePrompt(w http.ResponseWriter, r *http.Request, projectID s
 		writeError(w, http.StatusNotFound, "requirement not found")
 		return
 	}
-	prompt := BuildPrompt(project, req)
+	editor := RequirementEditorPromptRequest{
+		Blocks:      input.Blocks,
+		TencentDocs: input.TencentDocs,
+		Attachments: input.Attachments,
+		PlainText:   input.PlainText,
+	}
+	if strings.TrimSpace(editor.PlainText) == "" && strings.TrimSpace(req.Description) != "" {
+		editor.PlainText = req.Description
+	}
+	controlledInput := BuildLLMPromptInput(project, req, editor)
+	prompt, err := GenerateOpenCodePrompt(r.Context(), MergeLLMRequest(state.Config, input.LLM), controlledInput)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
 	result, err := StorePromptArtifact(project, req, prompt, "artifacts")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -445,6 +499,34 @@ func (s Server) handleGeneratePrompt(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"prompt": prompt,
 		"usage":  "placeholder; connect an online LLM from this backend endpoint only",
+	})
+}
+
+func (s Server) handleLLMTest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	state, err := s.store.Load()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var input LLMTestRequest
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	response, err := TestOpenCodeConnection(r.Context(), MergeLLMRequest(state.Config, input.LLM))
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	ok := strings.EqualFold(strings.TrimSpace(response), "pong")
+	writeJSON(w, map[string]any{
+		"ok":       ok,
+		"expected": "pong",
+		"response": response,
 	})
 }
 

@@ -1,0 +1,9 @@
+# Native MinerU document parser runtime for MutiSolo.
+# Install inside .venv-mineru; keep this separate from the Go/web app runtime.
+mineru==3.4.0
+torch==2.12.1
+torchvision==0.27.1
+transformers==4.57.6
+shapely==2.1.2
+six==1.17.0
+pyclipper==1.4.0

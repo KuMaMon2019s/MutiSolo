@@ -1,0 +1,34 @@
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: Mutesolo-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-Mutesolo}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Mutesolo123}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - mutisolo-minio-data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: Mutesolo-minio-init
+    depends_on:
+      - minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-Mutesolo}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Mutesolo123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-Mutesolo-assets}
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\"; do sleep 1; done &&
+      mc mb --ignore-existing local/\"$${MINIO_BUCKET}\" &&
+      mc anonymous set download local/\"$${MINIO_BUCKET}\" &&
+      mc ilm rule add --expire-days 7 local/\"$${MINIO_BUCKET}\" || true &&
+      mc ilm rule ls local/\"$${MINIO_BUCKET}\""
+    restart: "no"
+
+volumes:
+  mutisolo-minio-data:

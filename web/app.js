@@ -10,7 +10,11 @@ const state = {
   tailscaleDevices: [],
   tailscaleError: "",
   discordText: "",
+  llmLocked: false,
 };
+
+const editorContextRequests = new Map();
+let promptProgressTimer = null;
 
 const el = (id) => document.getElementById(id);
 
@@ -35,7 +39,8 @@ async function loadState() {
   el("discordWidgetUrl").value = cfg.discord_widget_url || "";
   el("discordBotId").value = cfg.discord_bot_id || "";
   el("clawhubUrl").value = cfg.clawhub_base_url || "";
-  el("llmUrl").value = cfg.llm_base_url || "";
+  el("llmApiKey").value = cfg.llm_api_key || "";
+  setLLMEditMode(!(cfg.llm_locked && cfg.llm_api_key), { quiet: true });
   renderDiscordWidget();
   renderProjects();
   renderBoard();
@@ -193,7 +198,8 @@ async function saveConfig() {
       discord_widget_url: el("discordWidgetUrl").value.trim(),
       discord_bot_id: el("discordBotId").value.trim(),
       clawhub_base_url: el("clawhubUrl").value.trim(),
-      llm_base_url: el("llmUrl").value.trim(),
+      llm_api_key: el("llmApiKey").value.trim(),
+      llm_locked: state.llmLocked,
     }),
   });
   await refreshConnections();
@@ -435,22 +441,183 @@ async function generatePrompt() {
   if (!project) throw new Error("Create or select a project first");
   const requirement = currentRequirement(project);
   if (!requirement) throw new Error("Select or create a requirement first");
-  const result = await api(`/api/projects/${project.id}/prompt`, {
-    method: "POST",
-    body: JSON.stringify({ requirement_id: requirement.id }),
+  try {
+    const llm = readLLMInputs();
+    const context = await requestRequirementEditorContext();
+    startPromptProgress();
+    const result = await api(`/api/projects/${project.id}/prompt`, {
+      method: "POST",
+      body: JSON.stringify({
+        requirement_id: requirement.id,
+        blocks: context.blocks || [],
+        tencentDocs: context.tencentDocs || [],
+        attachments: context.attachments || [],
+        plainText: context.plainText || requirement.description || "",
+        llm,
+      }),
+    });
+    finishPromptProgress();
+    el("artifactPath").textContent = result.artifact_path;
+    state.discordText = result.prompt || result.discord_text || (result.segments || []).join("\n\n");
+    renderPromptResult(result);
+    renderDiscordPreview();
+  } catch (error) {
+    stopPromptProgress();
+    showPromptError(error.message);
+    const status = el("llmTestStatus");
+    if (status && error.message.includes("OpenCode")) {
+      status.className = "llmTestStatus bad";
+      status.textContent = error.message;
+    }
+  }
+}
+
+function readLLMInputs() {
+  const apiKey = el("llmApiKey").value.trim();
+  if (!apiKey) {
+    el("llmApiKey").focus();
+    throw new Error("OpenCode API Key is required");
+  }
+  return {
+    provider: "opencode",
+    api_key: apiKey,
+  };
+}
+
+async function testLLMConnection() {
+  const status = el("llmTestStatus");
+  status.className = "llmTestStatus muted";
+  status.textContent = "Testing with: 只回复 pong";
+  try {
+    const result = await api("/api/llm/test", {
+      method: "POST",
+      body: JSON.stringify({ llm: readLLMInputs() }),
+    });
+    status.className = `llmTestStatus ${result.ok ? "ok" : "bad"}`;
+    status.textContent = result.ok ? "Connected: pong" : `Unexpected response: ${result.response || "empty"}`;
+  } catch (error) {
+    status.className = "llmTestStatus bad";
+    status.textContent = error.message;
+  }
+}
+
+async function saveLLMConfig() {
+  if (state.llmLocked) {
+    setLLMEditMode(true);
+    return;
+  }
+  readLLMInputs();
+  state.llmLocked = true;
+  await saveConfig();
+  setLLMEditMode(false);
+  const status = el("llmTestStatus");
+  status.className = "llmTestStatus ok";
+  status.textContent = "LLM config saved";
+}
+
+function setLLMEditMode(editable, options = {}) {
+  state.llmLocked = !editable;
+  for (const id of ["llmApiKey"]) {
+    const node = el(id);
+    if (node) node.disabled = !editable;
+  }
+  const button = el("saveLLMConfigBtn");
+  if (button) {
+    button.textContent = editable ? "Save" : "Edit";
+    button.title = editable ? "Save LLM config" : "Edit LLM config";
+  }
+  if (!options.quiet) {
+    const status = el("llmTestStatus");
+    status.className = "llmTestStatus muted";
+    status.textContent = editable ? "LLM config is editable" : "LLM config is saved";
+  }
+}
+
+function requestRequirementEditorContext() {
+  const frame = el("requirementEditorFrame");
+  if (!frame?.contentWindow) return Promise.resolve({});
+  const requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      editorContextRequests.delete(requestId);
+      reject(new Error("Requirement editor did not return content"));
+    }, 3000);
+    editorContextRequests.set(requestId, {
+      resolve: (context) => {
+        window.clearTimeout(timeout);
+        resolve(context || {});
+      },
+      reject,
+    });
+    frame.contentWindow.postMessage(
+      {
+        type: "Mutesolo.requirementEditor.requestContext",
+        requestId,
+      },
+      window.location.origin
+    );
   });
-  el("artifactPath").textContent = result.artifact_path;
-  state.discordText = result.discord_text || result.segments.join("\n\n");
+}
+
+function renderPromptResult(result) {
   const segments = el("segments");
   segments.innerHTML = "";
   segments.className = "segments";
-  result.segments.forEach((segment, index) => {
+  const prompt = result.prompt || "";
+  if (prompt) {
+    const node = document.createElement("div");
+    node.className = "segment";
+    node.innerHTML = `<strong>Generated Prompt</strong><pre>${escapeHtml(prompt)}</pre>`;
+    segments.append(node);
+    return;
+  }
+  (result.segments || []).forEach((segment, index) => {
     const node = document.createElement("div");
     node.className = "segment";
     node.innerHTML = `<strong>Segment ${index + 1}</strong><pre>${escapeHtml(segment)}</pre>`;
     segments.append(node);
   });
-  renderDiscordPreview();
+  if (!segments.children.length) {
+    segments.className = "segments empty";
+    segments.textContent = "No prompt generated";
+  }
+}
+
+function setPromptProgress(percent) {
+  const progress = Math.max(0, Math.min(100, Math.round(percent)));
+  el("promptProgress").classList.remove("hidden");
+  el("promptProgressText").textContent = `${progress}%`;
+  el("promptProgressBar").style.width = `${progress}%`;
+}
+
+function startPromptProgress() {
+  window.clearInterval(promptProgressTimer);
+  let progress = 0;
+  setPromptProgress(progress);
+  promptProgressTimer = window.setInterval(() => {
+    progress = Math.min(95, progress + Math.max(1, Math.round((96 - progress) * 0.08)));
+    setPromptProgress(progress);
+  }, 220);
+}
+
+function finishPromptProgress() {
+  window.clearInterval(promptProgressTimer);
+  promptProgressTimer = null;
+  setPromptProgress(100);
+}
+
+function stopPromptProgress() {
+  window.clearInterval(promptProgressTimer);
+  promptProgressTimer = null;
+  el("promptProgress").classList.add("hidden");
+  el("promptProgressBar").style.width = "0%";
+  el("promptProgressText").textContent = "0%";
+}
+
+function showPromptError(message) {
+  const segments = el("segments");
+  segments.className = "segments empty";
+  segments.textContent = message || "Prompt generation failed";
 }
 
 function renderDiscordPreview() {
@@ -460,7 +627,7 @@ function renderDiscordPreview() {
     preview.innerHTML = `<div class="discordMessage muted">Generate a prompt, then copy it into Discord.</div>`;
     return;
   }
-  preview.innerHTML = `<div class="discordMessage"><strong>MutiSolo</strong>${escapeHtml(state.discordText)}</div>`;
+  preview.innerHTML = `<div class="discordMessage"><strong>Mutesolo</strong>${escapeHtml(state.discordText)}</div>`;
 }
 
 async function copyDiscordPrompt() {
@@ -597,18 +764,6 @@ function renderIssueCard(req, color) {
     </div>`;
   card.addEventListener("click", (event) => {
     if (event.target.closest("input,select")) return;
-    if (event.detail >= 2) {
-      event.preventDefault();
-      openRequirementDetail(req.id);
-      return;
-    }
-    const selected = !state.selectedRequirements.has(req.id);
-    toggleRequirementSelection(req.id, selected);
-    wrap.classList.toggle("selected", selected);
-    const checkbox = wrap.querySelector("[data-select-req]");
-    if (checkbox) checkbox.checked = selected;
-  });
-  card.addEventListener("dblclick", (event) => {
     event.preventDefault();
     openRequirementDetail(req.id);
   });
@@ -800,7 +955,14 @@ async function saveTaskDetail() {
 
 window.addEventListener("message", (event) => {
   if (event.origin !== window.location.origin) return;
-  if (event.data?.type !== "mutisolo.requirementEditor.height") return;
+  if (event.data?.type === "Mutesolo.requirementEditor.context") {
+    const request = editorContextRequests.get(event.data.requestId);
+    if (!request) return;
+    editorContextRequests.delete(event.data.requestId);
+    request.resolve(event.data.context || {});
+    return;
+  }
+  if (event.data?.type !== "Mutesolo.requirementEditor.height") return;
   const height = Number(event.data.height);
   if (!Number.isFinite(height)) return;
   const frame = el("requirementEditorFrame");
@@ -1046,6 +1208,8 @@ bind("kanbanTabBtn", async () => showKanbanTab());
 bind("branchTabBtn", async () => showBranchTab());
 bind("promptBtn", generatePrompt);
 bind("copyDiscordBtn", copyDiscordPrompt);
+bind("testLLMBtn", testLLMConnection);
+bind("saveLLMConfigBtn", saveLLMConfig);
 bind("saveTaskBtn", saveTaskDetail);
 bind("pushBtn", pushGitHub);
 bind("closeSelectedBtn", closeSelected);

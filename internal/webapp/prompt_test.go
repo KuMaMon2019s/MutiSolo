@@ -84,7 +84,7 @@ func TestBuildDiscordMessageTargetsTailscaleAgentName(t *testing.T) {
 	}
 }
 
-func TestBuildRequirementEditorPromptKeepsLocalFilesBehindBackend(t *testing.T) {
+func TestBuildRequirementEditorPromptKeepsObjectStorageAssets(t *testing.T) {
 	prompt := BuildRequirementEditorPrompt(
 		"实现登录页",
 		[]map[string]any{{"type": "paragraph"}},
@@ -95,11 +95,13 @@ func TestBuildRequirementEditorPromptKeepsLocalFilesBehindBackend(t *testing.T) 
 			ReadInstruction: "只读取功能需求和接口要求",
 		}},
 		[]RequirementEditorAttachment{{
-			Name:     "flow.png",
-			MIMEType: "image/png",
-			Size:     2048,
-			Kind:     "image",
-			Source:   "local_browser_attachment",
+			Name:       "flow.png",
+			MIMEType:   "image/png",
+			Size:       2048,
+			Kind:       "image",
+			URL:        "http://127.0.0.1:9000/Mutesolo-assets/2026/06/25/flow.png",
+			StorageKey: "2026/06/25/flow.png",
+			Source:     "minio",
 		}},
 	)
 
@@ -108,6 +110,34 @@ func TestBuildRequirementEditorPromptKeepsLocalFilesBehindBackend(t *testing.T) 
 		"https://docs.qq.com/example",
 		"只读取功能需求和接口要求",
 		"flow.png",
+		"Storage key: 2026/06/25/flow.png",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("prompt does not contain %q: %q", want, prompt)
+		}
+	}
+	if strings.Contains(prompt, "http://127.0.0.1:9000") {
+		t.Fatalf("prompt leaked local object URL: %q", prompt)
+	}
+}
+
+func TestBuildLLMPromptInputIncludesControlledRulesAndDetail(t *testing.T) {
+	project := Project{Name: "Mutesolo", Description: "Agent coordination"}
+	req := Requirement{ID: "req-1", Title: "需求编辑器", Priority: "high", AgentID: "panda"}
+	editor := RequirementEditorPromptRequest{
+		PlainText: "实现 BlockNote 需求详情编辑",
+		Blocks:    []map[string]any{{"type": "paragraph"}},
+	}
+
+	prompt := BuildLLMPromptInput(project, req, editor)
+
+	for _, want := range []string{
+		"Backend structured rules",
+		"Do not introduce self-modifying runtime behavior",
+		"Mutesolo",
+		"需求编辑器",
+		"实现 BlockNote 需求详情编辑",
+		"panda",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("prompt does not contain %q: %q", want, prompt)

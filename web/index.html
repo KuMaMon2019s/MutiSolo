@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MutiSolo Control Console</title>
+    <title>Mutesolo Control Console</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main class="appShell">
       <aside id="navRail" class="navRail">
-        <div class="navLogo" title="MutiSolo">M</div>
+        <div class="navLogo" title="Mutesolo">M</div>
         <div class="statusPill">
           <strong id="todoRatio">0%</strong>
           <span>TO DO</span>
@@ -24,7 +24,7 @@
       </aside>
 
       <aside id="moduleSidebar" class="moduleSidebar">
-        <h2>Tracker</h2>
+        <h2>Mutesolo</h2>
         <input class="searchInput" placeholder="Search..." />
         <nav class="sideNav">
           <button id="allProjectsBtn" class="sideLink active">All project</button>
@@ -38,7 +38,7 @@
       <section class="mainArea">
         <header class="topbar">
           <div>
-            <h1>MutiSolo</h1>
+            <h1>Mutesolo</h1>
             <p>Coordinate OpenClaw agents through controlled prompts and verified commits</p>
           </div>
           <div class="toolbar">
@@ -143,6 +143,19 @@
                 <h2>Prompt</h2>
                 <p id="artifactPath" class="muted"></p>
               </div>
+              <div class="llmForm">
+                <label>OpenCode API Key<input id="llmApiKey" type="password" placeholder="opencode_..." autocomplete="off" /></label>
+                <button id="testLLMBtn" class="secondary" type="button">Test</button>
+                <button id="saveLLMConfigBtn" class="secondary" type="button">Save</button>
+              </div>
+              <p id="llmTestStatus" class="llmTestStatus muted">LLM config not tested</p>
+              <div id="promptProgress" class="promptProgress hidden" aria-live="polite">
+                <div class="progressMeta">
+                  <span>Generating with OpenCode</span>
+                  <strong id="promptProgressText">0%</strong>
+                </div>
+                <div class="progressTrack"><span id="promptProgressBar"></span></div>
+              </div>
               <div id="segments" class="segments empty">No prompt generated</div>
             </section>
           </div>
@@ -171,7 +184,7 @@
           <div class="viewHead">
             <div>
               <h2>Plugin Runtimes</h2>
-              <p class="muted">Compatibility descriptors only. MutiSolo does not execute arbitrary plugin code.</p>
+              <p class="muted">Compatibility descriptors only. Mutesolo does not execute arbitrary plugin code.</p>
             </div>
           </div>
           <div id="runtimeList" class="cardsGrid empty">No runtimes loaded</div>
@@ -181,7 +194,7 @@
           <div class="viewHead">
             <div>
               <h2>Connections</h2>
-              <p class="muted">OpenClaw, GitHub, Discord, private ClawHub, and LLM endpoints.</p>
+              <p class="muted">OpenClaw, GitHub, Discord, private ClawHub, and local credentials.</p>
             </div>
             <button id="saveConfigBtn">Save Connections</button>
           </div>
@@ -193,7 +206,6 @@
             <label>Discord server widget URL<input id="discordWidgetUrl" placeholder="https://discordapp.com/widget?id=...&theme=dark" /></label>
             <label>OpenClaw Discord BOT ID<input id="discordBotId" placeholder="1518540891617235114" /></label>
             <label>Private ClawHub URL<input id="clawhubUrl" placeholder="https://clawhub.internal" /></label>
-            <label>LLM API URL<input id="llmUrl" placeholder="https://llm.internal/v1" /></label>
           </div>
           <div class="statusGrid">
             <div class="panel">
